@@ -41,7 +41,7 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isOwner(resource.data.userId) ||
-        request.resource.data.diff(resource.data).changedKeys().hasOnly(['upvotes', 'downvotes', 'upvotedBy', 'downvotedBy', 'updatedAt'])
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['upvotes', 'downvotes', 'upvotedBy', 'downvotedBy', 'score', 'updatedAt'])
       );
       allow delete: if isOwner(resource.data.userId);
     }
@@ -152,6 +152,13 @@ service cloud.firestore {
       allow create, update, delete: if false; // Only admin can manage via Admin SDK
     }
     
+    // Notice verification requests - users can submit, view their own
+    match /notice_verification_requests/{requestId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.submittedBy;
+      allow create: if isSignedIn() && request.resource.data.submittedBy == request.auth.uid && request.resource.data.status == "pending";
+      allow update, delete: if false; // Only admin can approve/reject via Admin SDK
+    }
+    
     // Subjects, Units, Topics - read-only public
     match /subjects/{docId} {
       allow read: if true;
@@ -166,6 +173,22 @@ service cloud.firestore {
     match /topics/{docId} {
       allow read: if true;
       allow write: if false;
+    }
+    
+    // Library collections - read-only public
+    match /library_departments/{departmentId} {
+      allow read: if true;
+      allow write: if false; // Only admin can manage
+    }
+    
+    match /library_semesters/{semesterId} {
+      allow read: if true;
+      allow write: if false; // Only admin can manage
+    }
+    
+    match /library_subjects/{subjectId} {
+      allow read: if true;
+      allow write: if false; // Only admin can manage
     }
     
     match /quests/{docId} {

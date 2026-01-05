@@ -84,6 +84,8 @@ export interface Thread {
   score: number
   upvotes: number
   downvotes: number
+  upvotedBy: string[]
+  downvotedBy: string[]
   commentCount: number
   viewCount: number
   isPinned: boolean
@@ -101,6 +103,8 @@ export interface Comment {
   authorId: string
   isAnonymous: boolean
   score: number
+  upvotedBy: string[]
+  downvotedBy: string[]
   depth: number
   isEdited: boolean
   isDeleted: boolean
@@ -368,7 +372,15 @@ export async function createCanteenPost(postData: Omit<CanteenPost, "id" | "crea
 }
 
 export async function createCanteenComment(commentData: Omit<CanteenComment, "id" | "createdAt">) {
-  return createDocument<CanteenComment>(COLLECTIONS.CANTEEN_COMMENTS, commentData)
+  const commentId = await createDocument<CanteenComment>(COLLECTIONS.CANTEEN_COMMENTS, commentData)
+  
+  // Increment comment count on the post
+  const postRef = doc(db, COLLECTIONS.CANTEEN_POSTS, commentData.postId)
+  await updateDoc(postRef, {
+    comments: increment(1)
+  })
+  
+  return commentId
 }
 
 export async function getCanteenComments(postId: string) {
@@ -379,7 +391,7 @@ export async function getCanteenComments(postId: string) {
   ])
 }
 
-export async function votePoll(postId: string, optionId: string, userId: string) {
+export async function voteCanteenPoll(postId: string, optionId: string, userId: string) {
   const postRef = doc(db, COLLECTIONS.CANTEEN_POSTS, postId)
   const postDoc = await getDoc(postRef)
   
@@ -389,17 +401,29 @@ export async function votePoll(postId: string, optionId: string, userId: string)
   
   if (!post.pollData) throw new Error("Not a poll post")
   
-  // Check if user already voted
-  const alreadyVoted = post.pollData.options.some(opt => opt.votedBy?.includes(userId))
-  if (alreadyVoted) throw new Error("Already voted")
+  // Check if user already voted for this specific option
+  const votedOption = post.pollData.options.find(opt => opt.votedBy?.includes(userId))
+  const alreadyVotedForThis = votedOption?.id === optionId
   
-  // Update the specific option
+  if (alreadyVotedForThis) {
+    throw new Error("Already voted for this option")
+  }
+  
+  // Update options: remove vote from old option (if any) and add to new option
   const updatedOptions = post.pollData.options.map(opt => {
     if (opt.id === optionId) {
+      // Add vote to this option
       return {
         ...opt,
         votes: opt.votes + 1,
         votedBy: [...(opt.votedBy || []), userId]
+      }
+    } else if (votedOption && opt.id === votedOption.id) {
+      // Remove vote from previous option
+      return {
+        ...opt,
+        votes: opt.votes - 1,
+        votedBy: (opt.votedBy || []).filter(id => id !== userId)
       }
     }
     return opt
@@ -476,7 +500,17 @@ export async function updateUserXP(userId: string, xpToAdd: number) {
 export async function createThread(threadData: Omit<Thread, "id" | "createdAt" | "updatedAt">) {
   // Remove undefined fields to prevent Firestore errors
   const cleanedData = Object.fromEntries(
-    Object.entries({ ...threadData, updatedAt: serverTimestamp() as any })
+    Object.entries({ 
+      ...threadData, 
+      score: 0,
+      upvotes: 0,
+      downvotes: 0,
+      upvotedBy: [],
+      downvotedBy: [],
+      commentCount: 0,
+      viewCount: 0,
+      updatedAt: serverTimestamp() as any 
+    })
       .filter(([_, value]) => value !== undefined)
   )
   return createDocument<Thread>(COLLECTIONS.THREADS, cleanedData as any)
@@ -490,12 +524,59 @@ export async function getThreads(filters?: { category?: string; sortBy?: string 
   return getDocuments<Thread>(COLLECTIONS.THREADS, constraints)
 }
 
-export async function voteThread(threadId: string, delta: number) {
-  await updateDocument(COLLECTIONS.THREADS, threadId, {
-    score: increment(delta),
-    upvotes: delta > 0 ? increment(1) : increment(0),
-    downvotes: delta < 0 ? increment(1) : increment(0),
-  })
+export async function voteThread(threadId: string, userId: string, delta: number) {
+  const thread = await getDocument<Thread>(COLLECTIONS.THREADS, threadId)
+  if (!thread) return
+
+  const hasUpvoted = thread.upvotedBy?.includes(userId)
+  const hasDownvoted = thread.downvotedBy?.includes(userId)
+
+  let scoreChange = 0
+  let upvoteChange = 0
+  let downvoteChange = 0
+  const updates: any = {}
+
+  if (delta > 0) {
+    // User wants to upvote
+    if (hasUpvoted) {
+      // Remove upvote
+      scoreChange = -1
+      upvoteChange = -1
+      updates.upvotedBy = arrayRemove(userId)
+    } else {
+      // Add upvote (and remove downvote if exists)
+      scoreChange = hasDownvoted ? 2 : 1
+      upvoteChange = 1
+      downvoteChange = hasDownvoted ? -1 : 0
+      updates.upvotedBy = arrayUnion(userId)
+      if (hasDownvoted) {
+        updates.downvotedBy = arrayRemove(userId)
+      }
+    }
+  } else if (delta < 0) {
+    // User wants to downvote
+    if (hasDownvoted) {
+      // Remove downvote
+      scoreChange = 1
+      downvoteChange = -1
+      updates.downvotedBy = arrayRemove(userId)
+    } else {
+      // Add downvote (and remove upvote if exists)
+      scoreChange = hasUpvoted ? -2 : -1
+      downvoteChange = 1
+      upvoteChange = hasUpvoted ? -1 : 0
+      updates.downvotedBy = arrayUnion(userId)
+      if (hasUpvoted) {
+        updates.upvotedBy = arrayRemove(userId)
+      }
+    }
+  }
+
+  updates.score = increment(scoreChange)
+  if (upvoteChange !== 0) updates.upvotes = increment(upvoteChange)
+  if (downvoteChange !== 0) updates.downvotes = increment(downvoteChange)
+
+  await updateDocument(COLLECTIONS.THREADS, threadId, updates)
 }
 
 export async function updateThreadViews(threadId: string) {
@@ -505,9 +586,12 @@ export async function updateThreadViews(threadId: string) {
 }
 
 // Comment operations
-export async function createComment(commentData: Omit<Comment, "id" | "createdAt" | "updatedAt">) {
+export async function createComment(commentData: Omit<Comment, "id" | "createdAt" | "updatedAt" | "score" | "upvotedBy" | "downvotedBy">) {
   const commentId = await createDocument<Comment>(COLLECTIONS.COMMENTS, {
     ...commentData,
+    score: 0,
+    upvotedBy: [],
+    downvotedBy: [],
     updatedAt: serverTimestamp() as any,
   })
   
@@ -523,10 +607,48 @@ export async function getThreadComments(threadId: string) {
   return getDocuments<Comment>(COLLECTIONS.COMMENTS, [where("threadId", "==", threadId), orderBy("createdAt", "asc")])
 }
 
-export async function voteComment(commentId: string, delta: number) {
-  await updateDocument(COLLECTIONS.COMMENTS, commentId, {
-    score: increment(delta),
-  })
+export async function voteComment(commentId: string, userId: string, delta: number) {
+  const comment = await getDocument<Comment>(COLLECTIONS.COMMENTS, commentId)
+  if (!comment) return
+
+  const hasUpvoted = comment.upvotedBy?.includes(userId)
+  const hasDownvoted = comment.downvotedBy?.includes(userId)
+
+  let scoreChange = 0
+  const updates: any = {}
+
+  if (delta > 0) {
+    // User wants to upvote
+    if (hasUpvoted) {
+      // Remove upvote
+      scoreChange = -1
+      updates.upvotedBy = arrayRemove(userId)
+    } else {
+      // Add upvote (and remove downvote if exists)
+      scoreChange = hasDownvoted ? 2 : 1
+      updates.upvotedBy = arrayUnion(userId)
+      if (hasDownvoted) {
+        updates.downvotedBy = arrayRemove(userId)
+      }
+    }
+  } else if (delta < 0) {
+    // User wants to downvote
+    if (hasDownvoted) {
+      // Remove downvote
+      scoreChange = 1
+      updates.downvotedBy = arrayRemove(userId)
+    } else {
+      // Add downvote (and remove upvote if exists)
+      scoreChange = hasUpvoted ? -2 : -1
+      updates.downvotedBy = arrayUnion(userId)
+      if (hasUpvoted) {
+        updates.upvotedBy = arrayRemove(userId)
+      }
+    }
+  }
+
+  updates.score = increment(scoreChange)
+  await updateDocument(COLLECTIONS.COMMENTS, commentId, updates)
 }
 
 // Poll operations

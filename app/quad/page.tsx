@@ -85,6 +85,8 @@ export default function EnhancedQuadPage() {
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
   const [submittingComment, setSubmittingComment] = useState<string | null>(null)
+  const [pendingVotes, setPendingVotes] = useState<Set<string>>(new Set())
+  const [pendingCommentVotes, setPendingCommentVotes] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setMounted(true)
@@ -135,19 +137,79 @@ export default function EnhancedQuadPage() {
       return
     }
 
-    const currentVote = userVotes[threadId] || 0
-    const newVote = currentVote === delta ? 0 : delta
-    const scoreChange = newVote - currentVote
+    // Prevent multiple simultaneous votes
+    if (pendingVotes.has(threadId)) return
+    setPendingVotes(prev => new Set(prev).add(threadId))
 
-    setUserVotes((prev) => ({ ...prev, [threadId]: newVote }))
-    setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, score: t.score + scoreChange } : t)))
+    const thread = threads.find(t => t.id === threadId)
+    if (!thread) {
+      setPendingVotes(prev => {
+        const next = new Set(prev)
+        next.delete(threadId)
+        return next
+      })
+      return
+    }
+
+    const hasUpvoted = thread.upvotedBy?.includes(user.id)
+    const hasDownvoted = thread.downvotedBy?.includes(user.id)
+
+    // Calculate optimistic changes
+    let scoreChange = 0
+    let newUpvotedBy = [...(thread.upvotedBy || [])]
+    let newDownvotedBy = [...(thread.downvotedBy || [])]
+
+    if (delta > 0) {
+      if (hasUpvoted) {
+        // Remove upvote
+        scoreChange = -1
+        newUpvotedBy = newUpvotedBy.filter(id => id !== user.id)
+      } else {
+        // Add upvote
+        scoreChange = hasDownvoted ? 2 : 1
+        newUpvotedBy.push(user.id)
+        if (hasDownvoted) {
+          newDownvotedBy = newDownvotedBy.filter(id => id !== user.id)
+        }
+      }
+    } else if (delta < 0) {
+      if (hasDownvoted) {
+        // Remove downvote
+        scoreChange = 1
+        newDownvotedBy = newDownvotedBy.filter(id => id !== user.id)
+      } else {
+        // Add downvote
+        scoreChange = hasUpvoted ? -2 : -1
+        newDownvotedBy.push(user.id)
+        if (hasUpvoted) {
+          newUpvotedBy = newUpvotedBy.filter(id => id !== user.id)
+        }
+      }
+    }
+
+    // Optimistic update
+    setThreads(prev => prev.map(t => 
+      t.id === threadId 
+        ? { ...t, score: t.score + scoreChange, upvotedBy: newUpvotedBy, downvotedBy: newDownvotedBy }
+        : t
+    ))
 
     try {
-      await voteThread(threadId, scoreChange)
+      await voteThread(threadId, user.id, delta)
     } catch (err) {
-      setUserVotes((prev) => ({ ...prev, [threadId]: currentVote }))
-      setThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, score: t.score - scoreChange } : t)))
       console.error(err)
+      // Revert on error
+      setThreads(prev => prev.map(t => 
+        t.id === threadId 
+          ? { ...t, score: t.score - scoreChange, upvotedBy: thread.upvotedBy || [], downvotedBy: thread.downvotedBy || [] }
+          : t
+      ))
+    } finally {
+      setPendingVotes(prev => {
+        const next = new Set(prev)
+        next.delete(threadId)
+        return next
+      })
     }
   }
 
@@ -157,15 +219,81 @@ export default function EnhancedQuadPage() {
       return
     }
 
-    try {
-      setThreadComments((prev) => ({
-        ...prev,
-        [threadId]: prev[threadId].map((c) => (c.id === commentId ? { ...c, score: c.score + delta } : c)),
-      }))
+    // Prevent multiple simultaneous votes
+    if (pendingCommentVotes.has(commentId)) return
+    setPendingCommentVotes(prev => new Set(prev).add(commentId))
 
-      await voteComment(commentId, delta)
+    const comment = threadComments[threadId]?.find(c => c.id === commentId)
+    if (!comment) {
+      setPendingCommentVotes(prev => {
+        const next = new Set(prev)
+        next.delete(commentId)
+        return next
+      })
+      return
+    }
+
+    const hasUpvoted = comment.upvotedBy?.includes(user.id)
+    const hasDownvoted = comment.downvotedBy?.includes(user.id)
+
+    // Calculate optimistic changes
+    let scoreChange = 0
+    let newUpvotedBy = [...(comment.upvotedBy || [])]
+    let newDownvotedBy = [...(comment.downvotedBy || [])]
+
+    if (delta > 0) {
+      if (hasUpvoted) {
+        scoreChange = -1
+        newUpvotedBy = newUpvotedBy.filter(id => id !== user.id)
+      } else {
+        scoreChange = hasDownvoted ? 2 : 1
+        newUpvotedBy.push(user.id)
+        if (hasDownvoted) {
+          newDownvotedBy = newDownvotedBy.filter(id => id !== user.id)
+        }
+      }
+    } else if (delta < 0) {
+      if (hasDownvoted) {
+        scoreChange = 1
+        newDownvotedBy = newDownvotedBy.filter(id => id !== user.id)
+      } else {
+        scoreChange = hasUpvoted ? -2 : -1
+        newDownvotedBy.push(user.id)
+        if (hasUpvoted) {
+          newUpvotedBy = newUpvotedBy.filter(id => id !== user.id)
+        }
+      }
+    }
+
+    // Optimistic update
+    setThreadComments(prev => ({
+      ...prev,
+      [threadId]: prev[threadId].map(c => 
+        c.id === commentId 
+          ? { ...c, score: c.score + scoreChange, upvotedBy: newUpvotedBy, downvotedBy: newDownvotedBy }
+          : c
+      )
+    }))
+
+    try {
+      await voteComment(commentId, user.id, delta)
     } catch (err) {
       console.error(err)
+      // Revert on error
+      setThreadComments(prev => ({
+        ...prev,
+        [threadId]: prev[threadId].map(c => 
+          c.id === commentId 
+            ? { ...c, score: c.score - scoreChange, upvotedBy: comment.upvotedBy || [], downvotedBy: comment.downvotedBy || [] }
+            : c
+        )
+      }))
+    } finally {
+      setPendingCommentVotes(prev => {
+        const next = new Set(prev)
+        next.delete(commentId)
+        return next
+      })
     }
   }
 
@@ -368,7 +496,7 @@ export default function EnhancedQuadPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-white/5 text-white/60 hover:text-orange-400"
+                    className={cn("h-6 w-6 hover:bg-white/5 text-white/60 hover:text-orange-400", comment.upvotedBy?.includes(user?.id || "") && "text-orange-400")}
                     onClick={() => handleCommentVote(comment.id, threadId, 1)}
                   >
                     <ArrowBigUp className="w-4 h-4" />
@@ -377,7 +505,7 @@ export default function EnhancedQuadPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-white/5 text-white/60 hover:text-blue-400"
+                    className={cn("h-6 w-6 hover:bg-white/5 text-white/60 hover:text-blue-400", comment.downvotedBy?.includes(user?.id || "") && "text-blue-400")}
                     onClick={() => handleCommentVote(comment.id, threadId, -1)}
                   >
                     <ArrowBigDown className="w-4 h-4" />
@@ -462,7 +590,7 @@ export default function EnhancedQuadPage() {
               {/* Nested Replies */}
               {!isCollapsed && replies.length > 0 && (
                 <div className="mt-3">
-                  {replies.map((reply) => renderComments([reply, ...comments], threadId, depth + 1))}
+                  {renderComments(replies, threadId, depth + 1)}
                 </div>
               )}
             </div>
@@ -586,7 +714,7 @@ export default function EnhancedQuadPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className={cn("h-8 w-8 hover:bg-white/10", userVotes[thread.id] === 1 && "text-orange-400")}
+                          className={cn("h-8 w-8 hover:bg-white/10", thread.upvotedBy?.includes(user?.id || "") && "text-orange-400")}
                           onClick={() => handleVote(thread.id, 1)}
                         >
                           <ArrowBigUp className="w-5 h-5" />
@@ -595,7 +723,7 @@ export default function EnhancedQuadPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className={cn("h-8 w-8 hover:bg-white/10", userVotes[thread.id] === -1 && "text-blue-400")}
+                          className={cn("h-8 w-8 hover:bg-white/10", thread.downvotedBy?.includes(user?.id || "") && "text-blue-400")}
                           onClick={() => handleVote(thread.id, -1)}
                         >
                           <ArrowBigDown className="w-5 h-5" />
@@ -741,6 +869,7 @@ export default function EnhancedQuadPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-2xl bg-[#15181d] border border-white/10 rounded-3xl p-6 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">Create Thread</h2>

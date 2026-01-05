@@ -274,6 +274,11 @@ export default function CanteenPage() {
     if (!content) return
 
     try {
+      // Optimistic update - increment comment count immediately
+      setPosts(prev => prev.map(post => 
+        post.id === postId ? { ...post, comments: post.comments + 1 } : post
+      ))
+
       await createCanteenComment({
         postId,
         content,
@@ -281,16 +286,27 @@ export default function CanteenPage() {
         author: user.username || "Anonymous",
       })
 
+      // Reload comments to show new comment
       const comments = await getCanteenComments(postId)
       setPostComments(prev => ({ ...prev, [postId]: comments }))
       
-      setPosts(prev => prev.map(post => 
-        post.id === postId ? { ...post, comments: post.comments + 1 } : post
-      ))
-
       setCommentInputs(prev => ({ ...prev, [postId]: "" }))
+      
+      toast({
+        title: "Comment Posted",
+        description: "Your comment has been added!",
+      })
     } catch (error) {
       console.error("Error posting comment:", error)
+      // Revert optimistic update on error
+      setPosts(prev => prev.map(post => 
+        post.id === postId ? { ...post, comments: Math.max(0, post.comments - 1) } : post
+      ))
+      toast({
+        variant: "destructive",
+        title: "Comment Failed",
+        description: "Failed to post comment. Please try again.",
+      })
     }
   }
 
@@ -300,30 +316,37 @@ export default function CanteenPage() {
       return
     }
 
+    // Find the post and check if already voted for this option
+    const post = posts.find(p => p.id === postId)
+    if (post?.pollData) {
+      const votedOption = post.pollData.options.find(opt => opt.votedBy?.includes(user.id))
+      const alreadyVotedForThis = votedOption?.id === optionId
+      
+      if (alreadyVotedForThis) {
+        return // Silently ignore clicking same option
+      }
+    }
+
     try {
       // Optimistic update
       setPosts(prev => prev.map(post => {
         if (post.id === postId && post.pollData) {
-          // Check if user already voted
-          const alreadyVoted = post.pollData.options.some(opt => opt.votedBy?.includes(user.id))
-          if (alreadyVoted) {
-            toast({
-              variant: "destructive",
-              title: "Already Voted",
-              description: "You can only vote once per poll",
-            })
-            return post
-          }
+          const votedOption = post.pollData.options.find(opt => opt.votedBy?.includes(user.id))
 
           return {
             ...post,
             pollData: {
               ...post.pollData,
-              options: post.pollData.options.map(opt => 
-                opt.id === optionId
-                  ? { ...opt, votes: opt.votes + 1, votedBy: [...(opt.votedBy || []), user.id] }
-                  : opt
-              )
+              options: post.pollData.options.map(opt => {
+                if (opt.id === optionId) {
+                  // Add vote to this option
+                  return { ...opt, votes: opt.votes + 1, votedBy: [...(opt.votedBy || []), user.id] }
+                } else if (votedOption && opt.id === votedOption.id) {
+                  // Remove vote from previous option
+                  return { ...opt, votes: opt.votes - 1, votedBy: (opt.votedBy || []).filter(id => id !== user.id) }
+                }
+                return opt
+              })
             }
           }
         }
@@ -331,15 +354,16 @@ export default function CanteenPage() {
       }))
 
       // Update in Firestore
-      const { votePoll } = await import("@/lib/firestore")
-      await votePoll(postId, optionId, user.id)
+      const { voteCanteenPoll } = await import("@/lib/firestore")
+      await voteCanteenPoll(postId, optionId, user.id)
 
       toast({
         title: "Vote Recorded",
         description: "Thanks for voting!",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error voting:", error)
+      
       toast({
         variant: "destructive",
         title: "Vote Failed",
