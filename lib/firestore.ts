@@ -38,6 +38,10 @@ export const COLLECTIONS = {
   AI_CONVERSATIONS: "aiConversations",
   YOUTUBE_CACHE: "youtubeCache",
   USER_PREFERENCES: "userPreferences",
+  LEARN_HISTORY: "learnHistory",
+  QUIZ_HISTORY: "quizHistory",
+  CHAT_HISTORY: "chatHistory",
+  VIDEO_HISTORY: "videoHistory",
 } as const
 
 // Types
@@ -535,4 +539,112 @@ export async function shareCanteenPost(postId: string) {
   await updateDocument(COLLECTIONS.CANTEEN_POSTS, postId, {
     shares: increment(1),
   })
+}
+
+// Lab History Types
+export interface LearnHistory {
+  id: string
+  userId: string
+  topic: string
+  difficulty: "beginner" | "intermediate" | "advanced"
+  explanation: string
+  learningPath: {
+    topic: string
+    steps: {
+      title: string
+      description: string
+      resources: string[]
+      estimatedTime: string
+    }[]
+  }
+  createdAt: Timestamp
+}
+
+export interface QuizHistory {
+  id: string
+  userId: string
+  topic: string
+  questions: {
+    question: string
+    options: string[]
+    correctAnswer: number
+    explanation: string
+  }[]
+  score: number
+  totalQuestions: number
+  completed: boolean
+  currentQuestion: number
+  createdAt: Timestamp
+}
+
+export interface ChatHistory {
+  id: string
+  userId: string
+  topic: string
+  messages: { role: "user" | "ai"; content: string; timestamp: number }[]
+  createdAt: Timestamp
+}
+
+export interface VideoHistory {
+  id: string
+  userId: string
+  video: {
+    id: string
+    title: string
+    channelTitle: string
+    thumbnail: string
+    description: string
+    url: string
+    duration: string
+  }
+  createdAt: Timestamp
+}
+
+// Lab History operations
+export async function saveLearnHistory(userId: string, data: Omit<LearnHistory, "id" | "userId" | "createdAt">) {
+  return createDocument<LearnHistory>(COLLECTIONS.LEARN_HISTORY, { ...data, userId })
+}
+
+export async function getLearnHistory(userId: string, limit_count: number = 50) {
+  return getDocuments<LearnHistory>(COLLECTIONS.LEARN_HISTORY, [
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc"),
+    limit(limit_count),
+  ])
+}
+
+export async function saveQuizHistory(userId: string, data: Omit<QuizHistory, "id" | "userId" | "createdAt">) {
+  return createDocument<QuizHistory>(COLLECTIONS.QUIZ_HISTORY, { ...data, userId })
+}
+
+export async function getQuizHistory(userId: string, limit_count: number = 50) {
+  return getDocuments<QuizHistory>(COLLECTIONS.QUIZ_HISTORY, [
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc"),
+    limit(limit_count),
+  ])
+}
+
+export async function saveChatHistory(userId: string, data: Omit<ChatHistory, "id" | "userId" | "createdAt">) {
+  return createDocument<ChatHistory>(COLLECTIONS.CHAT_HISTORY, { ...data, userId })
+}
+
+export async function getChatHistory(userId: string, limit_count: number = 50) {
+  return getDocuments<ChatHistory>(COLLECTIONS.CHAT_HISTORY, [
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc"),
+    limit(limit_count),
+  ])
+}
+
+export async function saveVideoHistory(userId: string, data: Omit<VideoHistory, "id" | "userId" | "createdAt">) {
+  return createDocument<VideoHistory>(COLLECTIONS.VIDEO_HISTORY, { ...data, userId })
+}
+
+export async function getVideoHistory(userId: string, limit_count: number = 100) {
+  return getDocuments<VideoHistory>(COLLECTIONS.VIDEO_HISTORY, [
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc"),
+    limit(limit_count),
+  ])
 }

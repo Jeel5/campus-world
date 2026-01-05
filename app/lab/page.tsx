@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { 
   Trophy, Zap, Brain, ArrowRight, CheckCircle2, Cpu, Timer, 
   BookOpen, Video, MessageSquare, Sparkles, Search, Play, 
-  X, Loader2, Youtube, ChevronRight, Star, Target, Award
+  X, Loader2, Youtube, ChevronRight, Star, Target, Award, History, Clock
 } from "lucide-react"
 import ReactPlayer from "react-player"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -16,7 +16,22 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useAuth } from "@/context/AuthContext"
-import { updateUserXP, saveAIConversation } from "@/lib/firestore"
+import { 
+  updateUserXP, 
+  saveAIConversation,
+  saveLearnHistory,
+  getLearnHistory,
+  saveQuizHistory,
+  getQuizHistory,
+  saveChatHistory,
+  getChatHistory,
+  saveVideoHistory,
+  getVideoHistory,
+  type LearnHistory,
+  type QuizHistory,
+  type ChatHistory,
+  type VideoHistory
+} from "@/lib/firestore"
 import { 
   generateTopicExplanation, 
   generateQuizQuestions, 
@@ -64,15 +79,115 @@ export default function LabPage() {
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null)
   const [showVideoPlayer, setShowVideoPlayer] = useState(false)
 
+  // History states
+  const [learnHistory, setLearnHistory] = useState<LearnHistory[]>([])
+  const [quizHistory, setQuizHistory] = useState<QuizHistory[]>([])
+  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([])
+  const [videoHistory, setVideoHistory] = useState<VideoHistory[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [historySearch, setHistorySearch] = useState("")
+
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Load history from Firebase when user is available
+    if (user) {
+      loadHistoryFromFirebase()
+    }
+  }, [user])
 
   useEffect(() => {
     if (user) {
       setUserXP(user.xp || 0)
     }
   }, [user])
+
+  // History management functions
+  const loadHistoryFromFirebase = async () => {
+    if (!user) return
+    
+    try {
+      const [learn, quiz, chat, video] = await Promise.all([
+        getLearnHistory(user.id),
+        getQuizHistory(user.id),
+        getChatHistory(user.id),
+        getVideoHistory(user.id),
+      ])
+      
+      setLearnHistory(learn)
+      setQuizHistory(quiz)
+      setChatHistory(chat)
+      setVideoHistory(video)
+    } catch (e) {
+      console.error("Error loading history:", e)
+    }
+  }
+
+  const saveLearnToFirebase = async (data: Omit<LearnHistory, "id" | "userId" | "createdAt">) => {
+    if (!user) return
+    
+    try {
+      await saveLearnHistory(user.id, data)
+      await loadHistoryFromFirebase()
+    } catch (e) {
+      console.error("Error saving learn history:", e)
+    }
+  }
+
+  const saveQuizToFirebase = async (data: Omit<QuizHistory, "id" | "userId" | "createdAt">) => {
+    if (!user) return
+    
+    try {
+      await saveQuizHistory(user.id, data)
+      await loadHistoryFromFirebase()
+    } catch (e) {
+      console.error("Error saving quiz history:", e)
+    }
+  }
+
+  const saveChatToFirebase = async (data: Omit<ChatHistory, "id" | "userId" | "createdAt">) => {
+    if (!user) return
+    
+    try {
+      await saveChatHistory(user.id, data)
+      await loadHistoryFromFirebase()
+    } catch (e) {
+      console.error("Error saving chat history:", e)
+    }
+  }
+
+  const saveVideoToFirebase = async (video: YouTubeVideo) => {
+    if (!user) return
+    
+    try {
+      await saveVideoHistory(user.id, { video })
+      await loadHistoryFromFirebase()
+    } catch (e) {
+      console.error("Error saving video history:", e)
+    }
+  }
+
+  const loadLearnHistoryItem = (item: LearnHistory) => {
+    setSelectedTopic(item.topic)
+    setDifficulty(item.difficulty)
+    setExplanation(item.explanation)
+    setLearningPath(item.learningPath)
+    setShowHistory(false)
+  }
+
+  const loadQuizHistoryItem = (item: QuizHistory) => {
+    setSelectedTopic(item.topic)
+    setQuizQuestions(item.questions)
+    setCurrentQuestion(item.currentQuestion)
+    setQuizScore(item.score)
+    setQuizCompleted(item.completed)
+    setShowHistory(false)
+  }
+
+  const loadChatHistoryItem = (item: ChatHistory) => {
+    setSelectedTopic(item.topic)
+    setMessages(item.messages)
+    setShowHistory(false)
+  }
 
   const handleSearch = async () => {
     if (!searchTopic.trim() || !user) return
@@ -88,13 +203,31 @@ export default function LabPage() {
         ])
         setExplanation(exp)
         setLearningPath(path)
+        
+        // Save to Firebase
+        await saveLearnToFirebase({
+          topic: searchTopic,
+          difficulty,
+          explanation: exp,
+          learningPath: path,
+        })
       } else if (mode === "quiz") {
-        const questions = await generateQuizQuestions(searchTopic, 5, difficulty)
+        const questions = await generateQuizQuestions(searchTopic, 5)
         setQuizQuestions(questions)
         setCurrentQuestion(0)
         setQuizScore(0)
         setQuizCompleted(false)
         setShowExplanation(false)
+        
+        // Save to Firebase
+        await saveQuizToFirebase({
+          topic: searchTopic,
+          questions,
+          score: 0,
+          totalQuestions: questions.length,
+          completed: false,
+          currentQuestion: 0,
+        })
       } else if (mode === "videos") {
         const vids = await searchEducationalVideos(searchTopic, 10)
         setVideos(vids)
@@ -124,8 +257,41 @@ export default function LabPage() {
       setCurrentQuestion(prev => prev + 1)
       setSelectedAnswer(null)
       setShowExplanation(false)
+      
+      // Update quiz history in Firebase
+      if (selectedTopic && user) {
+        await saveQuizToFirebase({
+          topic: selectedTopic,
+          questions: quizQuestions,
+          score: quizScore,
+          totalQuestions: quizQuestions.length,
+          completed: false,
+          currentQuestion: currentQuestion + 1,
+        })
+      }
     } else {
       setQuizCompleted(true)
+      
+      // Save completed quiz to Firebase
+      if (selectedTopic && user) {
+        await saveQuizToFirebase({
+          topic: selectedTopic,
+          questions: quizQuestions,
+          score: quizScore,
+          totalQuestions: quizQuestions.length,
+          completed: true,
+          currentQuestion: quizQuestions.length,
+        })
+      }
+          topic: selectedTopic,
+          questions: quizQuestions,
+          score: quizScore,
+          totalQuestions: quizQuestions.length,
+          completed: true,
+          currentQuestion: quizQuestions.length,
+          timestamp: Date.now()
+        })
+      }
       
       if (user) {
         const xpGain = quizScore * 20
@@ -138,7 +304,7 @@ export default function LabPage() {
   const handleSendMessage = async () => {
     if (!chatInput.trim() || chatLoading || !user) return
     
-    const userMessage: AIMessage = { role: "user", content: chatInput }
+    const userMessage: AIMessage = { role: "user", content: chatInput, timestamp: Date.now() }
     const newMessages = [...messages, userMessage]
     setMessages(newMessages)
     setChatInput("")
@@ -146,11 +312,21 @@ export default function LabPage() {
     
     try {
       const response = await chatWithAI(newMessages, selectedTopic || undefined)
-      setMessages([...newMessages, { role: "assistant", content: response }])
+      const aiMessage: AIMessage = { role: "ai", content: response, timestamp: Date.now() }
+      const updatedMessages = [...newMessages, aiMessage]
+      setMessages(updatedMessages)
+      
+      // Save chat history to Firebase
+      if (selectedTopic) {
+        await saveChatToFirebase({
+          topic: selectedTopic,
+          messages: updatedMessages,
+        })
+      }
       
       await saveAIConversation({
         userId: user.id,
-        messages: [...newMessages, { role: "assistant", content: response }],
+        messages: updatedMessages,
         topic: selectedTopic || "General",
         createdAt: new Date() as any
       })
@@ -167,6 +343,7 @@ export default function LabPage() {
   const handleVideoClick = (video: YouTubeVideo) => {
     setSelectedVideo(video)
     setShowVideoPlayer(true)
+    saveVideoToFirebase(video)
   }
 
   return (
@@ -305,6 +482,9 @@ export default function LabPage() {
                       onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                       className="flex-1 bg-[#0f1318] border-emerald-700/30"
                     />
+                    <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30">
+                      <History className="w-4 h-4" />
+                    </Button>
                     <Button onClick={() => setDifficulty(d => d === "beginner" ? "intermediate" : d === "intermediate" ? "advanced" : "beginner")}
                             variant="outline" className="border-emerald-700/30">
                       {difficulty}
@@ -383,6 +563,9 @@ export default function LabPage() {
                         onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                         className="flex-1 bg-[#0f1318] border-emerald-700/30"
                       />
+                      <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30">
+                        <History className="w-4 h-4" />
+                      </Button>
                       <Button onClick={() => setDifficulty(d => d === "beginner" ? "intermediate" : d === "intermediate" ? "advanced" : "beginner")}
                               variant="outline" className="border-emerald-700/30">
                         {difficulty}
@@ -424,7 +607,9 @@ export default function LabPage() {
                         </Badge>
                       </div>
 
-                      <h3 className="text-xl font-semibold mb-6">{quizQuestions[currentQuestion].question}</h3>
+                      <div className="prose prose-invert max-w-none mb-6">
+                        <MarkdownRenderer content={quizQuestions[currentQuestion].question} className="text-xl" />
+                      </div>
 
                       <div className="space-y-3 mb-6">
                         {quizQuestions[currentQuestion].options.map((option, idx) => (
@@ -436,14 +621,16 @@ export default function LabPage() {
                               (idx === quizQuestions[currentQuestion].correctAnswer ? "default" : 
                                idx === selectedAnswer ? "destructive" : "outline") : 
                               "outline"}
-                            className={`w-full justify-start text-left h-auto py-4 px-6 ${
+                            className={`w-full justify-start text-left h-auto py-4 px-4 ${
                               showExplanation && idx === quizQuestions[currentQuestion].correctAnswer ? "bg-emerald-600" : ""
                             }`}
                           >
-                            <span className="font-semibold mr-3">{String.fromCharCode(65 + idx)}.</span>
-                            {option}
+                            <span className="font-semibold mr-3 shrink-0">{String.fromCharCode(65 + idx)}.</span>
+                            <div className="flex-1 min-w-0">
+                              <MarkdownRenderer content={option} className="prose-sm my-0" />
+                            </div>
                             {showExplanation && idx === quizQuestions[currentQuestion].correctAnswer && (
-                              <CheckCircle2 className="w-5 h-5 ml-auto" />
+                              <CheckCircle2 className="w-5 h-5 ml-2 shrink-0" />
                             )}
                           </Button>
                         ))}
@@ -453,9 +640,10 @@ export default function LabPage() {
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                           <Card className="bg-[#0f1318] border-emerald-700/30 mb-6">
                             <CardContent className="p-4">
-                              <p className="text-sm text-[#d1d1ca]">
-                                <strong className="text-emerald-400">Explanation:</strong> {quizQuestions[currentQuestion].explanation}
-                              </p>
+                              <div className="text-sm">
+                                <strong className="text-emerald-400 block mb-2">Explanation:</strong>
+                                <MarkdownRenderer content={quizQuestions[currentQuestion].explanation} className="prose-sm" />
+                              </div>
                             </CardContent>
                           </Card>
                           <Button onClick={handleNextQuestion} className="w-full">
@@ -481,6 +669,9 @@ export default function LabPage() {
                       onChange={(e) => setSearchTopic(e.target.value)}
                       className="flex-1 bg-[#0f1318] border-emerald-700/30"
                     />
+                    <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30">
+                      <History className="w-4 h-4" />
+                    </Button>
                     <Button onClick={() => setSelectedTopic(searchTopic)} variant="outline">
                       Set Topic
                     </Button>
@@ -556,6 +747,9 @@ export default function LabPage() {
                       onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                       className="flex-1 bg-[#0f1318] border-emerald-700/30"
                     />
+                    <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30">
+                      <History className="w-4 h-4" />
+                    </Button>
                     <Button onClick={handleSearch} disabled={loading || !user}>
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                     </Button>
@@ -601,7 +795,7 @@ export default function LabPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4 md:p-6"
+              className="fixed inset-0 bg-black/95 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4 lg:p-8"
               onClick={() => {
                 setShowVideoPlayer(false)
                 setTimeout(() => setSelectedVideo(null), 300)
@@ -611,29 +805,32 @@ export default function LabPage() {
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
-                className="w-full max-w-6xl bg-[#1a1e24] rounded-xl overflow-hidden shadow-2xl"
+                transition={{ type: "spring", damping: 25 }}
+                className="w-full max-w-5xl lg:max-w-6xl bg-[#1a1e24] rounded-lg lg:rounded-xl overflow-hidden shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="relative w-full aspect-video bg-black">
-                  <ReactPlayer
-                    key={selectedVideo.id}
-                    url={selectedVideo.url}
-                    width="100%"
-                    height="100%"
-                    controls
-                    playing={showVideoPlayer}
-                    config={{
-                      youtube: {
-                        playerVars: { 
-                          autoplay: 1,
-                          modestbranding: 1,
-                          rel: 0
+                <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+                  <div className="absolute inset-0 bg-black">
+                    <ReactPlayer
+                      key={`video-${selectedVideo.id}`}
+                      url={selectedVideo.url}
+                      width="100%"
+                      height="100%"
+                      controls
+                      playing
+                      config={{
+                        youtube: {
+                          playerVars: { 
+                            autoplay: 1,
+                            modestbranding: 1,
+                            rel: 0,
+                            origin: typeof window !== 'undefined' ? window.location.origin : ''
+                          }
                         }
-                      }
-                    }}
-                    onError={(e) => console.error("Video error:", e)}
-                    style={{ position: "absolute", top: 0, left: 0 }}
-                  />
+                      }}
+                      onError={(e) => console.error("Video error:", e)}
+                    />
+                  </div>
                 </div>
                 <div className="p-4 md:p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -649,6 +846,183 @@ export default function LabPage() {
                     </Button>
                   </div>
                   <p className="text-sm text-[#d1d1ca]">{selectedVideo.description}</p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* History Modal */}
+        <AnimatePresence mode="wait">
+          {showHistory && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/95 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4 lg:p-8"
+              onClick={() => setShowHistory(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full max-w-4xl bg-[#1a1e24] rounded-xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6 border-b border-emerald-700/20 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <History className="w-6 h-6 text-emerald-400" />
+                    <h2 className="text-2xl font-bold">History</h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setShowHistory(false)}>
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+                  <Input
+                    placeholder="Search history..."
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    className="bg-[#0f1318] border-emerald-700/30"
+                  />
+
+                  {/* Learn History */}
+                  {mode === "learn" && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Brain className="w-5 h-5 text-emerald-400" />
+                        Learning History
+                      </h3>
+                      {learnHistory
+                        .filter(h => h.topic.toLowerCase().includes(historySearch.toLowerCase()))
+                        .map(item => (
+                        <Card key={item.id} className="bg-[#0f1318] border-emerald-700/30 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                              onClick={() => loadLearnHistoryItem(item)}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold mb-1">{item.topic}</h4>
+                                <Badge variant="outline" className="text-xs">{item.difficulty}</Badge>
+                              </div>
+                              <div className="text-xs text-[#d1d1ca] flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {item.createdAt?.toDate?.()?.toLocaleDateString() || 'Recent'}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {learnHistory.length === 0 && (
+                        <p className="text-sm text-[#d1d1ca] text-center py-8">No learning history yet</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Quiz History */}
+                  {mode === "quiz" && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Award className="w-5 h-5 text-emerald-400" />
+                        Quiz History
+                      </h3>
+                      {quizHistory
+                        .filter(h => h.topic.toLowerCase().includes(historySearch.toLowerCase()))
+                        .map(item => (
+                        <Card key={item.id} className="bg-[#0f1318] border-emerald-700/30 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                              onClick={() => loadQuizHistoryItem(item)}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold mb-1">{item.topic}</h4>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Badge variant={item.completed ? "default" : "outline"}>
+                                    {item.completed ? "Completed" : `In Progress (${item.currentQuestion}/${item.totalQuestions})`}
+                                  </Badge>
+                                  <span className="text-emerald-400">{item.score}/{item.totalQuestions}</span>
+                                </div>
+                              </div>
+                              <div className="text-xs text-[#d1d1ca] flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {item.createdAt?.toDate?.()?.toLocaleDateString() || 'Recent'}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {quizHistory.length === 0 && (
+                        <p className="text-sm text-[#d1d1ca] text-center py-8">No quiz history yet</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Chat History */}
+                  {mode === "chat" && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-emerald-400" />
+                        Chat History
+                      </h3>
+                      {chatHistory
+                        .filter(h => h.topic.toLowerCase().includes(historySearch.toLowerCase()))
+                        .map(item => (
+                        <Card key={item.id} className="bg-[#0f1318] border-emerald-700/30 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                              onClick={() => loadChatHistoryItem(item)}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="font-semibold mb-1">{item.topic}</h4>
+                                <p className="text-xs text-[#d1d1ca]">{item.messages.length} messages</p>
+                              </div>
+                              <div className="text-xs text-[#d1d1ca] flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {item.createdAt?.toDate?.()?.toLocaleDateString() || 'Recent'}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {chatHistory.length === 0 && (
+                        <p className="text-sm text-[#d1d1ca] text-center py-8">No chat history yet</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Video History */}
+                  {mode === "videos" && (
+                    <div className="space-y-3">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Youtube className="w-5 h-5 text-emerald-400" />
+                        Watch History
+                      </h3>
+                      {videoHistory
+                        .filter(h => h.video.title.toLowerCase().includes(historySearch.toLowerCase()))
+                        .map(item => (
+                        <Card key={item.id} className="bg-[#0f1318] border-emerald-700/30 hover:border-emerald-500/50 transition-colors cursor-pointer"
+                              onClick={() => {
+                                handleVideoClick(item.video)
+                                setShowHistory(false)
+                              }}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <img src={item.video.thumbnail} alt="" className="w-24 h-16 rounded object-cover" />
+                              <div className="flex-1">
+                                <h4 className="font-semibold text-sm mb-1 line-clamp-2">{item.video.title}</h4>
+                                <p className="text-xs text-[#d1d1ca]">{item.video.channelTitle}</p>
+                              </div>
+                              <div className="text-xs text-[#d1d1ca] flex items-center gap-1 shrink-0">
+                                <Clock className="w-3 h-3" />
+                                {item.createdAt?.toDate?.()?.toLocaleDateString() || 'Recent'}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {videoHistory.length === 0 && (
+                        <p className="text-sm text-[#d1d1ca] text-center py-8">No watch history yet</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
