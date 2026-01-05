@@ -390,26 +390,26 @@ export default function LabPage() {
 
           {/* Mode Tabs */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="w-full">
-            <TabsList className="flex flex-col sm:grid sm:grid-cols-5 w-full bg-[#1a1e24] border border-emerald-700/20 gap-2 sm:gap-0 p-2 sm:p-0.5">
-              <TabsTrigger value="explore" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
-                <Target className="w-4 h-4 mr-2" />
-                <span>Explore</span>
+            <TabsList className="grid w-full grid-cols-5 bg-[#1a1e24] border border-emerald-700/20 p-0.5">
+              <TabsTrigger value="explore" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm">
+                <Target className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Explore</span>
               </TabsTrigger>
-              <TabsTrigger value="learn" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
-                <Brain className="w-4 h-4 mr-2" />
-                <span>Learn</span>
+              <TabsTrigger value="learn" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm">
+                <Brain className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Learn</span>
               </TabsTrigger>
-              <TabsTrigger value="quiz" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
-                <Award className="w-4 h-4 mr-2" />
-                <span>Quiz</span>
+              <TabsTrigger value="quiz" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm">
+                <Award className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Quiz</span>
               </TabsTrigger>
-              <TabsTrigger value="chat" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                <span>Chat</span>
+              <TabsTrigger value="chat" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm">
+                <MessageSquare className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Chat</span>
               </TabsTrigger>
-              <TabsTrigger value="videos" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
-                <Youtube className="w-4 h-4 mr-2" />
-                <span>Videos</span>
+              <TabsTrigger value="videos" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm">
+                <Youtube className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Videos</span>
               </TabsTrigger>
             </TabsList>
 
@@ -468,7 +468,7 @@ export default function LabPage() {
             <TabsContent value="learn" className="space-y-6 mt-6">
               <Card className="bg-[#1a1e24] border-emerald-700/20">
                 <CardContent className="p-6">
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Input
                       placeholder="Enter a topic to learn (e.g., Quantum Physics, Machine Learning)..."
                       value={searchTopic}
@@ -476,16 +476,18 @@ export default function LabPage() {
                       onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                       className="flex-1 bg-[#0f1318] border-emerald-700/30"
                     />
-                    <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30">
-                      <History className="w-4 h-4" />
-                    </Button>
-                    <Button onClick={() => setDifficulty(d => d === "beginner" ? "intermediate" : d === "intermediate" ? "advanced" : "beginner")}
-                            variant="outline" className="border-emerald-700/30">
-                      {difficulty}
-                    </Button>
-                    <Button onClick={handleSearch} disabled={loading || !user}>
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30 flex-1 sm:flex-none">
+                        <History className="w-4 h-4" />
+                      </Button>
+                      <Button onClick={() => setDifficulty(d => d === "beginner" ? "intermediate" : d === "intermediate" ? "advanced" : "beginner")}
+                              variant="outline" className="border-emerald-700/30 flex-1 sm:flex-none">
+                        {difficulty}
+                      </Button>
+                      <Button onClick={handleSearch} disabled={loading || !user} className="flex-1 sm:flex-none">
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -549,7 +551,7 @@ export default function LabPage() {
               {!quizQuestions.length ? (
                 <Card className="bg-[#1a1e24] border-emerald-700/20">
                   <CardContent className="p-6">
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <Input
                         placeholder="Enter a topic for quiz (e.g., JavaScript Arrays, Photosynthesis)..."
                         value={searchTopic}
@@ -557,16 +559,18 @@ export default function LabPage() {
                         onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                         className="flex-1 bg-[#0f1318] border-emerald-700/30"
                       />
-                      <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30">
-                        <History className="w-4 h-4" />
-                      </Button>
-                      <Button onClick={() => setDifficulty(d => d === "beginner" ? "intermediate" : d === "intermediate" ? "advanced" : "beginner")}
-                              variant="outline" className="border-emerald-700/30">
-                        {difficulty}
-                      </Button>
-                      <Button onClick={handleSearch} disabled={loading || !user}>
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Quiz"}
-                      </Button>
+                      <div className="flex gap-3">
+                        <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30 flex-1 sm:flex-none">
+                          <History className="w-4 h-4" />
+                        </Button>
+                        <Button onClick={() => setDifficulty(d => d === "beginner" ? "intermediate" : d === "intermediate" ? "advanced" : "beginner")}
+                                variant="outline" className="border-emerald-700/30 flex-1 sm:flex-none">
+                          {difficulty}
+                        </Button>
+                        <Button onClick={handleSearch} disabled={loading || !user} className="flex-1 sm:flex-none">
+                          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Start Quiz"}
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -733,7 +737,7 @@ export default function LabPage() {
             <TabsContent value="videos" className="space-y-6 mt-6">
               <Card className="bg-[#1a1e24] border-emerald-700/20">
                 <CardContent className="p-6">
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Input
                       placeholder="Search for educational videos..."
                       value={searchTopic}
@@ -741,12 +745,14 @@ export default function LabPage() {
                       onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                       className="flex-1 bg-[#0f1318] border-emerald-700/30"
                     />
-                    <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30">
-                      <History className="w-4 h-4" />
-                    </Button>
-                    <Button onClick={handleSearch} disabled={loading || !user}>
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button onClick={() => setShowHistory(true)} variant="outline" className="border-emerald-700/30 flex-1 sm:flex-none">
+                        <History className="w-4 h-4" />
+                      </Button>
+                      <Button onClick={handleSearch} disabled={loading || !user} className="flex-1 sm:flex-none">
+                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
