@@ -13,6 +13,8 @@ import {
   onSnapshot,
   serverTimestamp,
   increment,
+  arrayUnion,
+  arrayRemove,
   Timestamp,
   type DocumentData,
   type QueryConstraint,
@@ -26,6 +28,7 @@ export const COLLECTIONS = {
   THREADS: "threads",
   COMMENTS: "comments",
   CANTEEN_POSTS: "canteenPosts",
+  CANTEEN_COMMENTS: "canteenComments",
   POLLS: "polls",
   NOTICES: "notices",
   SUBJECTS: "subjects",
@@ -163,7 +166,7 @@ export interface UserPreferences {
 
 export interface CanteenPost {
   id: string
-  type: "confession" | "meme" | "photo" | "video" | "poll" | "story"
+  type: "text" | "confession" | "meme" | "photo" | "video" | "poll" | "story" | "image"
   content: string
   mediaUrl?: string
   mediaType?: "image" | "video"
@@ -176,9 +179,17 @@ export interface CanteenPost {
   shares: number
   pollData?: {
     question: string
-    options: { id: string; text: string; votes: number }[]
+    options: { id: string; text: string; votes: number; votedBy: string[] }[]
   }
-  expiresAt: Timestamp
+  createdAt: Timestamp
+}
+
+export interface CanteenComment {
+  id: string
+  postId: string
+  content: string
+  authorId: string
+  author: string
   createdAt: Timestamp
 }
 
@@ -331,23 +342,71 @@ export async function votePost(postId: string, delta: number) {
   })
 }
 
-export async function createCanteenPost(postData: Omit<CanteenPost, "id" | "createdAt">) {
-  return createDocument<CanteenPost>(COLLECTIONS.CANTEEN_POSTS, postData)
+export async function likeCanteenPost(postId: string, userId: string) {
+  const postRef = doc(db, COLLECTIONS.CANTEEN_POSTS, postId)
+  const postDoc = await getDoc(postRef)
+  
+  if (!postDoc.exists()) throw new Error("Post not found")
+  
+  const post = { id: postDoc.id, ...postDoc.data() } as CanteenPost
+  const isLiked = post.likedBy.includes(userId)
+  
+  await updateDoc(postRef, {
+    likes: increment(isLiked ? -1 : 1),
+    likedBy: isLiked ? arrayRemove(userId) : arrayUnion(userId)
+  })
 }
 
-export async function getCanteenPosts() {
-  const now = Timestamp.now()
-  return getDocuments<CanteenPost>(COLLECTIONS.CANTEEN_POSTS, [
-    where("expiresAt", ">", now),
-    orderBy("expiresAt", "desc"),
-    orderBy("createdAt", "desc"),
-    limit(50),
+export async function createCanteenPost(postData: Omit<CanteenPost, "id" | "createdAt" | "likes" | "likedBy" | "comments" | "shares">) {
+  return createDocument<CanteenPost>(COLLECTIONS.CANTEEN_POSTS, {
+    ...postData,
+    likes: 0,
+    likedBy: [],
+    comments: 0,
+    shares: 0,
+  })
+}
+
+export async function createCanteenComment(commentData: Omit<CanteenComment, "id" | "createdAt">) {
+  return createDocument<CanteenComment>(COLLECTIONS.CANTEEN_COMMENTS, commentData)
+}
+
+export async function getCanteenComments(postId: string) {
+  return getDocuments<CanteenComment>(COLLECTIONS.CANTEEN_COMMENTS, [
+    where("postId", "==", postId),
+    orderBy("createdAt", "asc"),
+    limit(100)
   ])
 }
 
-export async function likeCanteenPost(postId: string) {
-  await updateDocument(COLLECTIONS.CANTEEN_POSTS, postId, {
-    likes: increment(1),
+export async function votePoll(postId: string, optionId: string, userId: string) {
+  const postRef = doc(db, COLLECTIONS.CANTEEN_POSTS, postId)
+  const postDoc = await getDoc(postRef)
+  
+  if (!postDoc.exists()) throw new Error("Post not found")
+  
+  const post = { id: postDoc.id, ...postDoc.data() } as CanteenPost
+  
+  if (!post.pollData) throw new Error("Not a poll post")
+  
+  // Check if user already voted
+  const alreadyVoted = post.pollData.options.some(opt => opt.votedBy?.includes(userId))
+  if (alreadyVoted) throw new Error("Already voted")
+  
+  // Update the specific option
+  const updatedOptions = post.pollData.options.map(opt => {
+    if (opt.id === optionId) {
+      return {
+        ...opt,
+        votes: opt.votes + 1,
+        votedBy: [...(opt.votedBy || []), userId]
+      }
+    }
+    return opt
+  })
+  
+  await updateDoc(postRef, {
+    "pollData.options": updatedOptions
   })
 }
 

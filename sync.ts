@@ -306,6 +306,17 @@ async function syncFirebaseDatabase() {
     });
     console.log('✅ Material contributions collection created\n');
 
+    // 16. Create Canteen Comments Collection
+    console.log('📝 Creating canteenComments collection...');
+    await setDoc(doc(collection(db, 'canteenComments'), 'sample-canteen-comment'), {
+      postId: 'sample-post',
+      content: 'Great post! 🎉',
+      authorId: 'system',
+      author: 'Campus World',
+      createdAt: serverTimestamp()
+    });
+    console.log('✅ Canteen comments collection created\n');
+
     console.log('🎉 DATABASE SYNC COMPLETED SUCCESSFULLY!\n');
     console.log('📋 Collections Created:');
     console.log('   1. ✅ threads');
@@ -321,8 +332,9 @@ async function syncFirebaseDatabase() {
     console.log('   11. ✅ learnHistory');
     console.log('   12. ✅ quizHistory');
     console.log('   13. ✅ chatHistory');
-    console.log('   14. ✅ videoHistory\n');
-    console.log('   15. ✅ materialContributions\n');
+    console.log('   14. ✅ videoHistory');
+    console.log('   15. ✅ materialContributions');
+    console.log('   16. ✅ canteenComments\n');
     console.log('📋 Next Steps:');
     console.log('1. Go to Firebase Console → Firestore → Indexes');
     console.log('2. Click on any error links to create composite indexes');
