@@ -1,14 +1,41 @@
-import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
+// Load environment variables from .env.local
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env.local file FIRST before any Firebase imports
+config({ path: resolve(process.cwd(), '.env') });
+
+// Now import Firebase
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+
+// Initialize Firebase directly (without auth to avoid API key issues in Node.js)
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 async function syncFirebaseDatabase() {
   console.log('🚀 Starting Firebase Database Sync...\n');
+  console.log('⚠️  IMPORTANT: Before running this script, update Firestore Rules:\n');
+  console.log('Go to Firebase Console → Firestore → Rules');
+  console.log('Temporarily set to (for testing only):');
+  console.log('rules_version = \'2\';');
+  console.log('service cloud.firestore {');
+  console.log('  match /databases/{database}/documents {');
+  console.log('    match /{document=**} {');
+  console.log('      allow read, write: if true;');
+  console.log('    }');
+  console.log('  }');
+  console.log('}\n');
+  console.log('Press Ctrl+C to cancel, or any key to continue if rules are updated...\n');
 
   try {
     // 1. Create Threads Collection
@@ -194,7 +221,93 @@ async function syncFirebaseDatabase() {
     });
     console.log('✅ Notices collection created\n');
 
+    // 11. Create Learn History Collection
+    console.log('📝 Creating learnHistory collection...');
+    await setDoc(doc(collection(db, 'learnHistory'), 'sample-learn-history'), {
+      userId: 'system',
+      topic: 'Introduction to Machine Learning',
+      subject: 'Computer Science',
+      unit: 'Unit 5',
+      explanation: '# Machine Learning\n\nMachine learning is a subset of artificial intelligence...',
+      completed: true,
+      createdAt: serverTimestamp()
+    });
+    console.log('✅ Learn history collection created\n');
+
+    // 12. Create Quiz History Collection
+    console.log('📝 Creating quizHistory collection...');
+    await setDoc(doc(collection(db, 'quizHistory'), 'sample-quiz-history'), {
+      userId: 'system',
+      topic: 'Data Structures Quiz',
+      questions: [
+        {
+          question: 'What is a linked list?',
+          options: ['A. Array', 'B. Dynamic data structure', 'C. Static structure', 'D. None'],
+          correctAnswer: 1,
+          explanation: 'A linked list is a dynamic data structure...'
+        }
+      ],
+      score: 8,
+      totalQuestions: 10,
+      completed: true,
+      currentQuestion: 10,
+      createdAt: serverTimestamp()
+    });
+    console.log('✅ Quiz history collection created\n');
+
+    // 13. Create Chat History Collection
+    console.log('📝 Creating chatHistory collection...');
+    await setDoc(doc(collection(db, 'chatHistory'), 'sample-chat-history'), {
+      userId: 'system',
+      topic: 'Help with Algorithms',
+      messages: [
+        {
+          role: 'user',
+          content: 'Can you explain quicksort?'
+        },
+        {
+          role: 'assistant',
+          content: 'Quicksort is a divide-and-conquer sorting algorithm...'
+        }
+      ],
+      createdAt: serverTimestamp()
+    });
+    console.log('✅ Chat history collection created\n');
+
+    // 14. Create Video History Collection
+    console.log('📝 Creating videoHistory collection...');
+    await setDoc(doc(collection(db, 'videoHistory'), 'sample-video-history'), {
+      userId: 'system',
+      video: {
+        id: 'dQw4w9WgXcQ',
+        title: 'Learn Programming in 10 Minutes',
+        description: 'A comprehensive guide to programming',
+        thumbnail: 'https://via.placeholder.com/480x360',
+        channelTitle: 'Education Channel',
+        publishedAt: new Date().toISOString(),
+        viewCount: '5000000',
+        duration: 'PT10M'
+      },
+      createdAt: serverTimestamp()
+    });
+    console.log('✅ Video history collection created\n');
+
     console.log('🎉 DATABASE SYNC COMPLETED SUCCESSFULLY!\n');
+    console.log('📋 Collections Created:');
+    console.log('   1. ✅ threads');
+    console.log('   2. ✅ comments');
+    console.log('   3. ✅ canteenPosts');
+    console.log('   4. ✅ polls');
+    console.log('   5. ✅ aiConversations');
+    console.log('   6. ✅ youtubeCache');
+    console.log('   7. ✅ bookmarks');
+    console.log('   8. ✅ userPreferences');
+    console.log('   9. ✅ studyMaterials');
+    console.log('   10. ✅ notices');
+    console.log('   11. ✅ learnHistory');
+    console.log('   12. ✅ quizHistory');
+    console.log('   13. ✅ chatHistory');
+    console.log('   14. ✅ videoHistory\n');
     console.log('📋 Next Steps:');
     console.log('1. Go to Firebase Console → Firestore → Indexes');
     console.log('2. Click on any error links to create composite indexes');

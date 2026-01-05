@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Trophy, Zap, Brain, ArrowRight, CheckCircle2, Cpu, Timer, 
@@ -78,6 +79,7 @@ export default function LabPage() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([])
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null)
   const [showVideoPlayer, setShowVideoPlayer] = useState(false)
+  const [videoPlayerReady, setVideoPlayerReady] = useState(false)
 
   // History states
   const [learnHistory, setLearnHistory] = useState<LearnHistory[]>([])
@@ -281,15 +283,6 @@ export default function LabPage() {
           totalQuestions: quizQuestions.length,
           completed: true,
           currentQuestion: quizQuestions.length,
-        })
-      }
-          topic: selectedTopic,
-          questions: quizQuestions,
-          score: quizScore,
-          totalQuestions: quizQuestions.length,
-          completed: true,
-          currentQuestion: quizQuestions.length,
-          timestamp: Date.now()
         })
       }
       
@@ -788,69 +781,73 @@ export default function LabPage() {
         </motion.div>
         )}
 
-        {/* Video Player Modal */}
-        <AnimatePresence mode="wait">
-          {showVideoPlayer && selectedVideo && (
+        {/* Video Player Modal - Rendered via Portal */}
+        {mounted && showVideoPlayer && selectedVideo && createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ zIndex: 999999, position: 'fixed', inset: 0 }}
+            className="bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 lg:p-8"
+            onClick={() => {
+              setVideoPlayerReady(false)
+              setShowVideoPlayer(false)
+              setTimeout(() => setSelectedVideo(null), 300)
+            }}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/95 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4 lg:p-8"
-              onClick={() => {
-                setShowVideoPlayer(false)
-                setTimeout(() => setSelectedVideo(null), 300)
-              }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25 }}
+              className="relative w-full max-w-5xl lg:max-w-6xl bg-[#1a1e24] rounded-lg lg:rounded-xl overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
             >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", damping: 25 }}
-                className="w-full max-w-5xl lg:max-w-6xl bg-[#1a1e24] rounded-lg lg:rounded-xl overflow-hidden shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
-                  <div className="absolute inset-0 bg-black">
-                    <ReactPlayer
-                      key={`video-${selectedVideo.id}`}
-                      url={selectedVideo.url}
-                      width="100%"
-                      height="100%"
-                      controls
-                      playing
-                      config={{
-                        youtube: {
-                          playerVars: { 
-                            autoplay: 1,
-                            modestbranding: 1,
-                            rel: 0,
-                            origin: typeof window !== 'undefined' ? window.location.origin : ''
-                          }
+              <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
+                <div className="absolute inset-0 bg-black">
+                  <ReactPlayer
+                    key={`video-${selectedVideo.id}`}
+                    url={selectedVideo.url}
+                    width="100%"
+                    height="100%"
+                    controls
+                    playing={videoPlayerReady}
+                    onReady={() => {
+                      setTimeout(() => setVideoPlayerReady(true), 100)
+                    }}
+                    config={{
+                      youtube: {
+                        playerVars: { 
+                          autoplay: 1,
+                          modestbranding: 1,
+                          rel: 0,
+                          origin: typeof window !== 'undefined' ? window.location.origin : ''
                         }
-                      }}
-                      onError={(e) => console.error("Video error:", e)}
-                    />
-                  </div>
+                      }
+                    }}
+                  />
                 </div>
-                <div className="p-4 md:p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-semibold mb-2">{selectedVideo.title}</h3>
-                      <p className="text-sm text-[#d1d1ca]">{selectedVideo.channelTitle}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => {
-                      setShowVideoPlayer(false)
-                      setTimeout(() => setSelectedVideo(null), 300)
-                    }}>
-                      <X className="w-5 h-5" />
-                    </Button>
+              </div>
+              <div className="p-4 md:p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold mb-2">{selectedVideo.title}</h3>
+                    <p className="text-sm text-[#d1d1ca]">{selectedVideo.channelTitle}</p>
                   </div>
-                  <p className="text-sm text-[#d1d1ca]">{selectedVideo.description}</p>
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    setVideoPlayerReady(false)
+                    setShowVideoPlayer(false)
+                    setTimeout(() => setSelectedVideo(null), 300)
+                  }}>
+                    <X className="w-5 h-5" />
+                  </Button>
                 </div>
-              </motion.div>
+                <p className="text-sm text-[#d1d1ca]">{selectedVideo.description}</p>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
+          </motion.div>,
+          document.body
+        )}
 
         {/* History Modal */}
         <AnimatePresence mode="wait">
