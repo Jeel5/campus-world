@@ -48,7 +48,7 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isOwner(resource.data.authorId) ||
-        request.resource.data.keys().hasOnly(['score', 'upvotes', 'downvotes', 'commentCount', 'viewCount', 'updatedAt'])
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['score', 'upvotes', 'downvotes', 'commentCount', 'viewCount', 'updatedAt'])
       );
       allow delete: if isOwner(resource.data.authorId);
     }
@@ -59,7 +59,7 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update: if isSignedIn() && (
         isOwner(resource.data.authorId) ||
-        request.resource.data.keys().hasOnly(['score', 'updatedAt', 'isEdited'])
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['score', 'updatedAt', 'isEdited'])
       );
       allow delete: if isOwner(resource.data.authorId);
     }
@@ -138,12 +138,6 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
     
-    // Bookmarks
-    match /bookmarks/{bookmarkId} {
-      allow read, write: if isOwner(resource.data.userId);
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
-    }
-    
     // User preferences
     match /userPreferences/{userId} {
       allow read, write: if isOwner(userId);
@@ -190,12 +184,6 @@ service cloud.firestore {
     match /quests/{docId} {
       allow read: if true;
       allow write: if isSignedIn();
-    }
-    
-    // User progress
-    match /userProgress/{docId} {
-      allow read, write: if isOwner(resource.data.userId);
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
     }
     
     // Votes
