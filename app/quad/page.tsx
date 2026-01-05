@@ -10,7 +10,6 @@ import {
   Plus,
   ArrowBigUp,
   ArrowBigDown,
-  Share2,
   TrendingUp,
   Search,
   Hash,
@@ -18,14 +17,14 @@ import {
   Reply,
   Heart,
   Smile,
-  CloudRain,
   Loader2,
   X,
   Eye,
   Send,
-  AlertTriangle,
   Pin,
   Filter,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -72,18 +71,20 @@ export default function EnhancedQuadPage() {
   const [userVotes, setUserVotes] = useState<Record<string, number>>({})
   const [threadComments, setThreadComments] = useState<Record<string, Comment[]>>({})
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({})
+  const [replyingTo, setReplyingTo] = useState<Record<string, boolean>>({})
+  const [collapsedComments, setCollapsedComments] = useState<Set<string>>(new Set())
   const [showComposer, setShowComposer] = useState(false)
   const [composerTitle, setComposerTitle] = useState("")
   const [composerContent, setComposerContent] = useState("")
   const [composerCategory, setComposerCategory] = useState("academic")
   const [composerTags, setComposerTags] = useState<string[]>([])
-  const [composerCW, setComposerCW] = useState("")
   const [anonymous, setAnonymous] = useState(true)
   const [tagInput, setTagInput] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
+  const [submittingComment, setSubmittingComment] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -213,7 +214,6 @@ export default function EnhancedQuadPage() {
       isAnonymous: anonymous,
       category: composerCategory,
       tags: composerTags,
-      contentWarning: composerCW.trim() || undefined,
       score: 0,
       upvotes: 0,
       downvotes: 0,
@@ -229,7 +229,6 @@ export default function EnhancedQuadPage() {
       setComposerContent("")
       setComposerCategory("academic")
       setComposerTags([])
-      setComposerCW("")
       setShowComposer(false)
       setError(null)
     } catch (err) {
@@ -239,7 +238,8 @@ export default function EnhancedQuadPage() {
   }
 
   const handleAddComment = async (threadId: string, parentId: string | null = null) => {
-    const content = commentDrafts[parentId || threadId]
+    const draftKey = parentId || threadId
+    const content = commentDrafts[draftKey]
     if (!content?.trim()) return
 
     if (!user) {
@@ -263,14 +263,48 @@ export default function EnhancedQuadPage() {
     }
 
     try {
-      await createComment(commentData as any)
-      setCommentDrafts((prev) => ({ ...prev, [parentId || threadId]: "" }))
+      setSubmittingComment(draftKey)
+      
+      // Clear draft immediately for better UX
+      setCommentDrafts((prev) => {
+        const next = { ...prev }
+        delete next[draftKey]
+        return next
+      })
 
+      await createComment(commentData as any)
+
+      // Reload comments to get the new one
       const comments = await getThreadComments(threadId)
       setThreadComments((prev) => ({ ...prev, [threadId]: comments }))
+      
+      // Clear reply state
+      if (parentId) {
+        setReplyingTo((prev) => {
+          const next = { ...prev }
+          delete next[parentId]
+          return next
+        })
+      }
     } catch (err) {
       console.error("Error adding comment:", err)
+      // Restore draft on error
+      setCommentDrafts((prev) => ({ ...prev, [draftKey]: content }))
+    } finally {
+      setSubmittingComment(null)
     }
+  }
+
+  const toggleCommentCollapse = (commentId: string) => {
+    setCollapsedComments((prev) => {
+      const next = new Set(prev)
+      if (next.has(commentId)) {
+        next.delete(commentId)
+      } else {
+        next.add(commentId)
+      }
+      return next
+    })
   }
 
   const addTag = () => {
@@ -285,26 +319,29 @@ export default function EnhancedQuadPage() {
   }
 
   const renderComments = (comments: Comment[], threadId: string, depth: number = 0) => {
-    const topLevel = comments.filter((c) => c.depth === depth && (!c.parentId && depth === 0))
-
+    const topLevel = comments.filter((c) => (depth === 0 ? !c.parentId : c.depth === depth))
+    
     return topLevel.map((comment) => {
       const replies = comments.filter((c) => c.parentId === comment.id)
+      const isCollapsed = collapsedComments.has(comment.id)
+      const isReplying = replyingTo[comment.id]
+      const draftKey = comment.id
 
       return (
         <motion.div
           key={comment.id}
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          className={cn("mt-4", depth > 0 && "ml-8 border-l-2 border-white/5 pl-4")}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn("mt-3", depth > 0 && "ml-6 border-l-2 border-white/5 pl-4")}
         >
           <div className="flex gap-3">
-            <Avatar className="w-8 h-8 border border-white/10">
+            <Avatar className="w-8 h-8 border border-white/10 flex-shrink-0">
               <AvatarFallback className="bg-indigo-900/40 text-indigo-100 text-xs">
                 {comment.isAnonymous ? "?" : comment.author.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="text-sm font-medium text-white/80">
                   {comment.isAnonymous ? "Anonymous" : comment.author}
                 </span>
@@ -313,34 +350,121 @@ export default function EnhancedQuadPage() {
                     ? formatDistanceToNow(new Date(comment.createdAt.seconds * 1000), { addSuffix: true })
                     : "just now"}
                 </span>
+                {replies.length > 0 && (
+                  <button
+                    onClick={() => toggleCommentCollapse(comment.id)}
+                    className="text-xs text-white/50 hover:text-white/80 flex items-center gap-1"
+                  >
+                    {isCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    {isCollapsed ? `Show ${replies.length} ${replies.length === 1 ? "reply" : "replies"}` : "Collapse"}
+                  </button>
+                )}
               </div>
-              <p className="text-sm text-white/70 leading-relaxed mb-2">{comment.content}</p>
-              <div className="flex items-center gap-2">
+              
+              <p className="text-sm text-white/70 leading-relaxed mb-2 break-words">{comment.content}</p>
+              
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-white/5"
+                    className="h-6 w-6 hover:bg-white/5 text-white/60 hover:text-orange-400"
                     onClick={() => handleCommentVote(comment.id, threadId, 1)}
                   >
                     <ArrowBigUp className="w-4 h-4" />
                   </Button>
-                  <span className="text-xs text-white/60 min-w-[20px] text-center">{comment.score}</span>
+                  <span className="text-xs text-white/60 min-w-[24px] text-center font-medium">{comment.score}</span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 hover:bg-white/5"
+                    className="h-6 w-6 hover:bg-white/5 text-white/60 hover:text-blue-400"
                     onClick={() => handleCommentVote(comment.id, threadId, -1)}
                   >
                     <ArrowBigDown className="w-4 h-4" />
                   </Button>
                 </div>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs hover:bg-white/5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs hover:bg-white/5 text-white/60 hover:text-white"
+                  onClick={() => setReplyingTo((prev) => ({ ...prev, [comment.id]: !prev[comment.id] }))}
+                >
                   <Reply className="w-3 h-3 mr-1" />
                   Reply
                 </Button>
               </div>
-              {replies.length > 0 && renderComments(comments, threadId, depth + 1)}
+
+              {/* Reply Input */}
+              {isReplying && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3"
+                >
+                  <Textarea
+                    placeholder="Write a reply..."
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40 text-sm min-h-[60px] resize-none"
+                    value={commentDrafts[draftKey] || ""}
+                    onChange={(e) => {
+                      const textarea = e.target
+                      textarea.style.height = 'auto'
+                      textarea.style.height = textarea.scrollHeight + 'px'
+                      setCommentDrafts((prev) => ({ ...prev, [draftKey]: e.target.value }))
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleAddComment(threadId, comment.id)
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      onClick={() => handleAddComment(threadId, comment.id)}
+                      disabled={!commentDrafts[draftKey]?.trim() || submittingComment === draftKey}
+                      className="h-7 px-3 text-xs rounded-lg bg-indigo-800 hover:bg-indigo-700 disabled:opacity-50"
+                    >
+                      {submittingComment === draftKey ? (
+                        <>
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                          Posting...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3 h-3 mr-1" />
+                          Reply
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setReplyingTo((prev) => {
+                          const next = { ...prev }
+                          delete next[comment.id]
+                          return next
+                        })
+                        setCommentDrafts((prev) => {
+                          const next = { ...prev }
+                          delete next[draftKey]
+                          return next
+                        })
+                      }}
+                      variant="ghost"
+                      className="h-7 px-3 text-xs"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Nested Replies */}
+              {!isCollapsed && replies.length > 0 && (
+                <div className="mt-3">
+                  {replies.map((reply) => renderComments([reply, ...comments], threadId, depth + 1))}
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -417,26 +541,28 @@ export default function EnhancedQuadPage() {
             </motion.div>
           )}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-white/5 border border-white/10">
-              <TabsTrigger value="hot" className="gap-2">
-                <Flame className="w-4 h-4" />
-                Hot
-              </TabsTrigger>
-              <TabsTrigger value="best" className="gap-2">
-                <TrendingUp className="w-4 h-4" />
-                Best
-              </TabsTrigger>
-              <TabsTrigger value="new" className="gap-2">
-                <Clock className="w-4 h-4" />
-                New
-              </TabsTrigger>
-              <TabsTrigger value="top" className="gap-2">
-                <ArrowBigUp className="w-4 h-4" />
-                Top
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {mounted && (
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="bg-white/5 border border-white/10">
+                <TabsTrigger value="hot" className="gap-2">
+                  <Flame className="w-4 h-4" />
+                  Hot
+                </TabsTrigger>
+                <TabsTrigger value="best" className="gap-2">
+                  <TrendingUp className="w-4 h-4" />
+                  Best
+                </TabsTrigger>
+                <TabsTrigger value="new" className="gap-2">
+                  <Clock className="w-4 h-4" />
+                  New
+                </TabsTrigger>
+                <TabsTrigger value="top" className="gap-2">
+                  <ArrowBigUp className="w-4 h-4" />
+                  Top
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
         </header>
 
         <div className="space-y-4">
@@ -496,21 +622,14 @@ export default function EnhancedQuadPage() {
                           </span>
                         </div>
 
-                        {thread.contentWarning && (
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-900/20 border border-amber-800/30">
-                            <AlertTriangle className="w-4 h-4 text-amber-400" />
-                            <span className="text-xs text-amber-200">CW: {thread.contentWarning}</span>
-                          </div>
-                        )}
-
                         <div>
                           <h3
-                            className="text-xl font-bold text-white mb-2 cursor-pointer hover:text-indigo-200"
+                            className="text-xl font-bold text-white mb-2 cursor-pointer hover:text-indigo-200 transition-colors"
                             onClick={() => toggleThread(thread.id)}
                           >
                             {thread.title}
                           </h3>
-                          <p className="text-white/70 text-sm line-clamp-2">{thread.content}</p>
+                          <p className="text-white/70 text-sm line-clamp-3 leading-relaxed">{thread.content}</p>
                         </div>
 
                         {thread.tags && thread.tags.length > 0 && (
@@ -519,7 +638,7 @@ export default function EnhancedQuadPage() {
                               <Badge
                                 key={tag}
                                 variant="outline"
-                                className="border-indigo-800/30 bg-indigo-900/20 text-indigo-200"
+                                className="border-indigo-800/30 bg-indigo-900/20 text-indigo-200 text-xs"
                               >
                                 #{tag}
                               </Badge>
@@ -527,22 +646,18 @@ export default function EnhancedQuadPage() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-4 text-white/60">
+                        <div className="flex items-center gap-6 text-white/60 text-sm">
                           <button
                             onClick={() => toggleThread(thread.id)}
                             className="flex items-center gap-2 hover:text-white transition-colors"
                           >
                             <MessageSquare className="w-4 h-4" />
-                            <span className="text-sm">{thread.commentCount} comments</span>
+                            <span>{thread.commentCount || 0} comments</span>
                           </button>
                           <div className="flex items-center gap-2">
                             <Eye className="w-4 h-4" />
-                            <span className="text-sm">{thread.viewCount} views</span>
+                            <span>{thread.viewCount || 0} views</span>
                           </div>
-                          <button className="flex items-center gap-2 hover:text-white transition-colors">
-                            <Share2 className="w-4 h-4" />
-                            <span className="text-sm">Share</span>
-                          </button>
                         </div>
 
                         {expandedThreads.has(thread.id) && (
@@ -553,37 +668,53 @@ export default function EnhancedQuadPage() {
                             className="mt-6 pt-6 border-t border-white/10 space-y-4"
                           >
                             <div className="flex gap-3">
-                              <Avatar className="w-8 h-8 border border-white/10">
+                              <Avatar className="w-8 h-8 border border-white/10 flex-shrink-0">
                                 <AvatarFallback className="bg-indigo-900/40 text-indigo-100 text-xs">
                                   {anonymous ? "?" : user?.username?.charAt(0).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <Textarea
-                                  placeholder="Add a comment..."
-                                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[80px]"
+                                  placeholder="Add a comment... (Press Enter to submit, Shift+Enter for new line)"
+                                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 text-sm min-h-[80px] resize-none"
                                   value={commentDrafts[thread.id] || ""}
-                                  onChange={(e) =>
-                                    setCommentDrafts((prev) => ({
-                                      ...prev,
-                                      [thread.id]: e.target.value,
-                                    }))
-                                  }
+                                  onChange={(e) => {
+                                    const textarea = e.target
+                                    textarea.style.height = 'auto'
+                                    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'
+                                    setCommentDrafts((prev) => ({ ...prev, [thread.id]: e.target.value }))
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault()
+                                      handleAddComment(thread.id)
+                                    }
+                                  }}
                                 />
                                 <Button
                                   onClick={() => handleAddComment(thread.id)}
-                                  className="mt-2 h-9 px-4 rounded-xl bg-indigo-800 hover:bg-indigo-700"
+                                  disabled={!commentDrafts[thread.id]?.trim() || submittingComment === thread.id}
+                                  className="mt-2 h-9 px-4 rounded-xl bg-indigo-800 hover:bg-indigo-700 disabled:opacity-50"
                                 >
-                                  <Send className="w-3 h-3 mr-2" />
-                                  Comment
+                                  {submittingComment === thread.id ? (
+                                    <>
+                                      <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                                      Posting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send className="w-3 h-3 mr-2" />
+                                      Comment
+                                    </>
+                                  )}
                                 </Button>
                               </div>
                             </div>
 
                             {threadComments[thread.id] && threadComments[thread.id].length > 0 ? (
-                              <div className="space-y-2">{renderComments(threadComments[thread.id], thread.id)}</div>
+                              <div className="space-y-1">{renderComments(threadComments[thread.id], thread.id)}</div>
                             ) : (
-                              <p className="text-center text-white/40 text-sm py-4">No comments yet. Be the first!</p>
+                              <p className="text-center text-white/40 text-sm py-6">No comments yet. Be the first to share your thoughts!</p>
                             )}
                           </motion.div>
                         )}
@@ -652,16 +783,6 @@ export default function EnhancedQuadPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white">Content Warning (Optional)</Label>
-                <Input
-                  placeholder="e.g., Academic stress, Mental health"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                  value={composerCW}
-                  onChange={(e) => setComposerCW(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label className="text-white">Title *</Label>
                 <Input
                   placeholder="What's your thread about?"
@@ -675,7 +796,7 @@ export default function EnhancedQuadPage() {
                 <Label className="text-white">Content *</Label>
                 <Textarea
                   placeholder="Share your thoughts..."
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[150px]"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 min-h-[150px] resize-none"
                   value={composerContent}
                   onChange={(e) => setComposerContent(e.target.value)}
                 />
