@@ -85,6 +85,37 @@
     background-image: radial-gradient(at 0% 0%, oklch(0.65 0.22 260 / 0.08) 0px, transparent 50%),
       radial-gradient(at 100% 100%, oklch(0.75 0.18 160 / 0.08) 0px, transparent 50%);
   }
+
+  /* Add cursor pointer to interactive elements */
+  button, 
+  a, 
+  [role="button"],
+  [type="button"],
+  [type="submit"],
+  [type="reset"] {
+    @apply cursor-pointer;
+  }
+
+  button:disabled,
+  [role="button"]:disabled {
+    @apply cursor-not-allowed;
+  }
+
+  /* Enhanced hover effects for links */
+  a:not([class*="button"]) {
+    @apply transition-all duration-200;
+  }
+
+  a:not([class*="button"]):hover {
+    @apply brightness-110;
+  }
+
+  /* Smooth transitions for all interactive elements */
+  button,
+  a,
+  [role="button"] {
+    @apply transition-all duration-200 ease-in-out;
+  }
   
   /* Hide scrollbars but allow scrolling */
   html {

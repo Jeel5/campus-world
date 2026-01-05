@@ -60,7 +60,7 @@ export function CampusSidebar() {
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
       <div className="p-8 flex-1 flex flex-col">
-        <div className="flex items-center gap-4 mb-14 group cursor-pointer">
+        <Link href="/" className="flex items-center gap-4 mb-14 group cursor-pointer" onClick={() => setIsOpen(false)}>
           <motion.div
             whileHover={{ rotate: 180, scale: 1.1 }}
             className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-[0_0_30px_rgba(var(--primary),0.3)]"
@@ -68,12 +68,12 @@ export function CampusSidebar() {
             CW
           </motion.div>
           <div className="flex flex-col">
-            <h1 className="font-black text-xl tracking-tighter leading-none">CampusWorld</h1>
+            <h1 className="text-xl tracking-wide leading-none font-semibold">CampusWorld</h1>
             <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-bold mt-1">
-              Digital Twin v2.0
+              Your Campus Hub
             </span>
           </div>
-        </div>
+        </Link>
 
         <nav className="space-y-1.5">
           {navItems.map((item, idx) => {
