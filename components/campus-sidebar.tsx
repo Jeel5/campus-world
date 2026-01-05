@@ -73,15 +73,20 @@ export function CampusSidebar() {
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
       <div className="p-8 flex-1 flex flex-col">
-        <Link href="/" className="flex items-center gap-4 mb-14 group cursor-pointer" onClick={() => setIsOpen(false)}>
-          <motion.div
-            whileHover={{ rotate: 180, scale: 1.1 }}
-            className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-[0_0_30px_rgba(var(--primary),0.3)]"
-          >
-            CW
-          </motion.div>
-          <div className="flex flex-col">
-            <h1 className="font-black text-xl tracking-tighter leading-none">CampusWorld</h1>
+        <Link href="/" onClick={() => setIsOpen(false)}>
+          <div className="flex items-center gap-4 mb-14 group cursor-pointer hover:opacity-80 transition-opacity duration-200">
+            <motion.div
+              whileHover={{ rotate: 180, scale: 1.1 }}
+              className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-[0_0_30px_rgba(var(--primary),0.3)]"
+            >
+              CW
+            </motion.div>
+            <div className="flex flex-col">
+              <h1 className="font-bold text-xl tracking-tight leading-none text-white">CampusWorld</h1>
+              <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-bold mt-1">
+                Your Campus Hub
+              </span>
+            </div>
           </div>
         </Link>
 
