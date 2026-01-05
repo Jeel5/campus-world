@@ -365,6 +365,28 @@ export async function voteNotice(noticeId: string) {
   })
 }
 
+export interface NoticeVerificationRequest {
+  id: string
+  title: string
+  description: string
+  category: string
+  location: string
+  dateTime: string
+  sourceUrl?: string
+  attachmentUrl?: string
+  submittedBy: string
+  submittedByEmail: string
+  status: "pending" | "approved" | "rejected"
+  createdAt: Timestamp
+}
+
+export async function submitNoticeForVerification(data: Omit<NoticeVerificationRequest, "id" | "createdAt" | "status">) {
+  return createDocument<NoticeVerificationRequest>("notice_verification_requests", {
+    ...data,
+    status: "pending",
+  })
+}
+
 export async function getSubjects() {
   return getDocuments<Subject>(COLLECTIONS.SUBJECTS, [])
 }

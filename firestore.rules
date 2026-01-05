@@ -1,0 +1,227 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(authorId) {
+      return isSignedIn() && request.auth.uid == authorId;
+    }
+    
+    // Validate like/unlike operation - ensure user can only add/remove their own ID
+    function isValidLikeUpdate() {
+      let likesBefore = resource.data.likes;
+      let likesAfter = request.resource.data.likes;
+      let userLiked = request.auth.uid in likesBefore;
+      let userWillLike = request.auth.uid in likesAfter;
+      
+      // User can add themselves to likes array (like action)
+      let isLiking = !userLiked && userWillLike && 
+                     likesAfter.size() == likesBefore.size() + 1;
+      
+      // User can remove themselves from likes array (unlike action)
+      let isUnliking = userLiked && !userWillLike && 
+                       likesAfter.size() == likesBefore.size() - 1;
+      
+      return isLiking || isUnliking;
+    }
+    
+    // Users collection - allow public reads, private writes
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+    }
+    
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isOwner(resource.data.authorId);
+    }
+    
+    // Threads collection (Quad)
+    match /threads/{threadId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isOwner(resource.data.authorId) ||
+        request.resource.data.keys().hasOnly(['score', 'upvotes', 'downvotes', 'commentCount', 'viewCount', 'updatedAt'])
+      );
+      allow delete: if isOwner(resource.data.authorId);
+    }
+    
+    // Comments collection
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (
+        isOwner(resource.data.authorId) ||
+        request.resource.data.keys().hasOnly(['score', 'updatedAt', 'isEdited'])
+      );
+      allow delete: if isOwner(resource.data.authorId);
+    }
+    
+    // Canteen posts with secure like/unlike functionality
+    match /canteenPosts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      
+      // Allow like/unlike: users can add/remove only their own ID from likes array
+      allow update: if isSignedIn() && (
+        // Owner can edit post content
+        isOwner(resource.data.authorId) ||
+        // Any authenticated user can like/unlike
+        (request.resource.data.keys().hasOnly(['likes', 'updatedAt']) && isValidLikeUpdate()) ||
+        // Comments update (separate from likes)
+        request.resource.data.keys().hasOnly(['comments', 'updatedAt'])
+      );
+      
+      allow delete: if isOwner(resource.data.authorId);
+    }
+    
+    // Polls
+    match /polls/{pollId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && request.resource.data.keys().hasOnly(['votes', 'results', 'updatedAt']);
+      allow delete: if isOwner(resource.data.authorId);
+    }
+    
+    // Learn History
+    match /learnHistory/{historyId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.uid == request.resource.data.userId
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Quiz History
+    match /quizHistory/{historyId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.uid == request.resource.data.userId
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Chat History
+    match /chatHistory/{historyId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.uid == request.resource.data.userId
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Video History
+    match /videoHistory/{historyId} {
+      allow read, write: if isSignedIn() && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.uid == request.resource.data.userId
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // AI Conversations
+    match /aiConversations/{conversationId} {
+      allow read, write: if isOwner(resource.data.userId);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // YouTube cache
+    match /youtubeCache/{cacheId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    
+    // Bookmarks
+    match /bookmarks/{bookmarkId} {
+      allow read, write: if isOwner(resource.data.userId);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // User preferences
+    match /userPreferences/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Study materials
+    match /studyMaterials/{materialId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isOwner(resource.data.authorId);
+    }
+    
+    // Notices - read-only for users
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow create, update, delete: if false; // Only admin can manage via Admin SDK
+    }
+    
+    // Notice Verification Requests - authenticated users can submit
+    match /notice_verification_requests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && 
+                       request.resource.data.submittedBy == request.auth.uid &&
+                       request.resource.data.status == "pending";
+      allow update, delete: if false; // Only admin can approve/reject via Admin SDK
+    }
+    
+    // Subjects, Units, Topics, Quests - read-only public
+    match /subjects/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /units/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /topics/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /quests/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    
+    // User progress
+    match /userProgress/{docId} {
+      allow read, write: if isOwner(resource.data.userId);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Votes
+    match /votes/{docId} {
+      allow read, write: if isSignedIn();
+    }
+    
+    // Library collections - authenticated users can contribute
+    match /library_departments/{departmentId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Authenticated users can contribute
+    }
+    
+    match /library_semesters/{semesterId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Authenticated users can contribute
+    }
+    
+    match /library_subjects/{subjectId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // Authenticated users can contribute
+    }
+    
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
