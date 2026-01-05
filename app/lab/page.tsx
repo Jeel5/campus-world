@@ -8,7 +8,6 @@ import {
   BookOpen, Video, MessageSquare, Sparkles, Search, Play, 
   X, Loader2, Youtube, ChevronRight, Star, Target, Award, History, Clock
 } from "lucide-react"
-import ReactPlayer from "react-player"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -79,7 +78,6 @@ export default function LabPage() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([])
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null)
   const [showVideoPlayer, setShowVideoPlayer] = useState(false)
-  const [videoPlayerReady, setVideoPlayerReady] = useState(false)
 
   // History states
   const [learnHistory, setLearnHistory] = useState<LearnHistory[]>([])
@@ -790,7 +788,6 @@ export default function LabPage() {
             style={{ zIndex: 999999, position: 'fixed', inset: 0 }}
             className="bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 lg:p-8"
             onClick={() => {
-              setVideoPlayerReady(false)
               setShowVideoPlayer(false)
               setTimeout(() => setSelectedVideo(null), 300)
             }}
@@ -804,29 +801,14 @@ export default function LabPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
-                <div className="absolute inset-0 bg-black">
-                  <ReactPlayer
-                    key={`video-${selectedVideo.id}`}
-                    url={selectedVideo.url}
-                    width="100%"
-                    height="100%"
-                    controls
-                    playing={videoPlayerReady}
-                    onReady={() => {
-                      setTimeout(() => setVideoPlayerReady(true), 100)
-                    }}
-                    config={{
-                      youtube: {
-                        playerVars: { 
-                          autoplay: 1,
-                          modestbranding: 1,
-                          rel: 0,
-                          origin: typeof window !== 'undefined' ? window.location.origin : ''
-                        }
-                      }
-                    }}
-                  />
-                </div>
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${selectedVideo.id}?autoplay=1&modestbranding=1&rel=0&enablejsapi=1`}
+                  title={selectedVideo.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  style={{ border: 'none' }}
+                />
               </div>
               <div className="p-4 md:p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -835,7 +817,6 @@ export default function LabPage() {
                     <p className="text-sm text-[#d1d1ca]">{selectedVideo.channelTitle}</p>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => {
-                    setVideoPlayerReady(false)
                     setShowVideoPlayer(false)
                     setTimeout(() => setSelectedVideo(null), 300)
                   }}>
