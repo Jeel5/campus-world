@@ -168,9 +168,9 @@ export default function SubmitNoticeModal({ isOpen, onClose }: SubmitNoticeModal
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 pt-20 lg:pt-4"
           >
-            <div className="bg-[#15181d] border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-[#15181d] border border-white/10 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] lg:max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="sticky top-0 bg-[#15181d] border-b border-white/10 px-6 py-4 flex items-center justify-between">
                 <div>

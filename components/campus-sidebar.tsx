@@ -31,14 +31,27 @@ export function CampusSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button */}
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden w-10 h-10 p-0 rounded-xl bg-black/80 border border-white/10 hover:bg-black/90"
-        size="icon"
-      >
-        {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </Button>
+      {/* Mobile Top Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 lg:hidden bg-black/90 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+            <motion.div
+              whileHover={{ rotate: 180, scale: 1.1 }}
+              className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center text-white font-black text-base shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+            >
+              CW
+            </motion.div>
+            <h1 className="font-black text-lg tracking-tighter">CampusWorld</h1>
+          </Link>
+          <Button
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-14 h-14 p-0 rounded-xl bg-black/80 border border-white/10 hover:bg-black/90"
+            size="icon"
+          >
+            {isOpen ? <X className="w-10 h-10" /> : <Menu className="w-10 h-10" />}
+          </Button>
+        </div>
+      </div>
 
       {/* Mobile Overlay */}
       <AnimatePresence>

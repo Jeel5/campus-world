@@ -175,7 +175,7 @@ service cloud.firestore {
       allow write: if false;
     }
     
-    // Library collections - read-only public
+     // Library collections - read-only public
     match /library_departments/{departmentId} {
       allow read: if true;
       allow write: if false; // Only admin can manage

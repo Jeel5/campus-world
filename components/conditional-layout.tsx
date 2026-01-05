@@ -15,7 +15,7 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
 
       {!isAuthPage && <CampusSidebar />}
       
-      <main className={`flex-1 min-h-screen relative w-full overflow-x-hidden ${!isAuthPage ? "lg:ml-72" : ""}`}>
+      <main className={`flex-1 min-h-screen relative w-full overflow-x-hidden ${!isAuthPage ? "lg:ml-72 pt-[60px] lg:pt-0" : ""}`}>
         {/* Background Grid Lines */}
         {!isAuthPage && <div className="absolute inset-0 grid-lines pointer-events-none z-0 opacity-20" />}
 

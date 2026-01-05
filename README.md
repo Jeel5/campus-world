@@ -1,623 +1,225 @@
-# Campus World - Enhanced Platform 🎓
+# 🎓 CampusWorld - Digital Campus Hub
 
-> A comprehensive virtual campus platform built for the Google Hackathon 2026, featuring AI-powered learning, social interactions, and community forums.
-
-## 🚀 What's New
-
-### Major Enhancements
-
-#### 1. The Quad - Reddit-Style Forum
-- **Full Thread System**: Create threads with titles, content warnings (CW/), tags, and categories
-- **Anonymous Mode**: Post without revealing your identity
-- **Nested Comments**: Reddit-style comment threads with unlimited depth
-- **Voting System**: Upvote/downvote threads and comments
-- **Smart Sorting**: Hot, Best, New, Top algorithms
-- **Real-time Updates**: See new threads and comments instantly
-- **Advanced Search**: Search by title, content, or tags
-- **Content Warnings**: Add CW tags for sensitive topics
-
-#### 2. The Lab - AI-Powered Learning
-- **Gemini AI Integration**:
-  - Get topic explanations at any level (beginner/intermediate/advanced)
-  - Generate complete learning paths
-  - Interactive AI-generated quizzes
-  - Chat with AI tutor for help
-  - Step-by-step problem solving
-  - Practice problem generation
+<div align="center">
   
-- **YouTube Auto-Find**:
-  - Automatically find educational videos for any topic
-  - Search complete playlists
-  - Filter by difficulty level
-  - Cached results for faster loading
-
-- **Quest System**:
-  - Interactive learning quests
-  - XP and progression tracking
-  - Multiple difficulty levels
-  - Real-time progress saving
-
-#### 3. The Canteen - Social Media
-- **Multi-Format Posts**:
-  - Text posts and confessions
-  - Photo and video uploads
-  - Interactive polls
-  - Ephemeral stories
+  ![CampusWorld Banner](https://img.shields.io/badge/CampusWorld-Digital_Campus_Hub-10B981?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMkw0IDdWMTJDNCAxNi40IDE3IDE5IDE3IDE5TDIwIDdMMTIgMloiIGZpbGw9IiNGRkZGRkYiLz48L3N2Zz4=)
   
-- **Social Features**:
-  - Like/unlike with tracking
-  - Comment threads
-  - Share functionality
-  - Anonymous posting option
-  - Expiring content (24-hour default)
+  **Your Ultimate Digital Campus Experience**
+  
+  [![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+  [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com/)
+  [![Gemini AI](https://img.shields.io/badge/Gemini_AI-4285F4?style=flat-square&logo=google&logoColor=white)](https://ai.google.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  
+</div>
 
-#### 4. The Library - Resource Hub
-- **Organization**: Subjects → Units → Topics
-- **Search**: Full-text search across all resources
-- **Bookmarking**: Save favorite materials
-- **Filters**: By subject, difficulty, format
-- **Tracking**: View counts and popular resources
+---
 
-#### 5. Notice Board - Announcements
-- **Categorization**: Academic, Events, Administrative, Emergency
-- **Trust System**: Community voting on notices
-- **Official Badges**: Verified admin posts
-- **Pinning**: Important notices stay on top
+## 📋 Table of Contents
 
-## 📦 Installation & Setup
+- [Overview](#-overview)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Getting Started](#-getting-started)
+- [Project Structure](#-project-structure)
+- [Key Highlights](#-key-highlights)
+- [Screenshots](#-screenshots)
+- [Future Enhancements](#-future-enhancements)
+
+---
+
+## 🌟 Overview
+
+**CampusWorld** is a comprehensive digital platform designed to revolutionize the campus experience by bringing all essential academic and social features under one unified interface. It serves as a central hub where students can learn, collaborate, socialize, and stay informed - all in one place.
+
+### 🎯 Problem Statement
+
+Traditional campus life is fragmented across multiple platforms - students need separate apps for social interaction, academic resources, announcements, and casual conversations. This creates:
+- Information overload and missed updates
+- Disconnected learning experiences
+- Lack of centralized communication
+- Difficulty accessing educational resources
+
+### 💡 Our Solution
+
+CampusWorld consolidates everything into an intuitive, gamified platform with six interconnected zones, each serving a specific purpose while maintaining a cohesive user experience.
+
+---
+
+## ✨ Features
+
+### 🗺️ **Campus Map** - Interactive Navigation Hub
+- Visual representation of all campus zones
+- Smooth, performance-optimized animations
+- One-click navigation to any section
+- Mobile-responsive design with top navigation bar
+
+### 👥 **The Quad** - Community Discussion Forum
+- Real-time threaded discussions
+- Create posts with images (Cloudinary integration)
+- Upvote/downvote system with optimistic updates
+- Nested comment replies with proper vote tracking
+- Prevents duplicate voting with user tracking arrays
+
+### 📚 **The Library** - Knowledge Repository
+- Organized educational content by:
+  - Departments
+  - Semesters
+  - Subjects
+  - Units
+  - Topics
+- Comprehensive explanations with examples
+- Searchable content structure
+- Easy navigation through nested categories
+
+### 🔬 **The Lab** - AI-Powered Learning Platform
+- **Learn Mode**: 
+  - AI-generated topic explanations (Gemini AI)
+  - Structured learning paths with time estimates
+  - Difficulty levels (Beginner, Intermediate, Advanced)
+- **Quiz Mode**: 
+  - Dynamic AI-generated quizzes
+  - Instant feedback with explanations
+  - XP rewards system (20 XP per correct answer)
+- **Chat Mode**: 
+  - Conversational AI assistant
+  - Context-aware responses
+  - Topic-based conversation history
+- **Videos Mode**: 
+  - YouTube API integration
+  - Curated educational videos
+  - Watch history tracking
+- **History System**: 
+  - Persistent learning history
+  - Resume incomplete quizzes
+  - Access past conversations
+
+### ☕ **The Canteen** - Social Feed
+- Campus social media feed
+- Create posts with media uploads
+- Comments with optimistic updates
+- Real-time engagement tracking
+- Anonymous posting support
+
+### 📢 **Notice Board** - Official Announcements
+- Verified official notices
+- Submit notices for admin verification
+- Category-based filtering (Academic, Events, Important)
+- Mobile-optimized modal positioning
+- Real-time updates via Firestore subscriptions
+
+---
+
+## 🛠️ Tech Stack
+
+### **Frontend**
+- **Framework**: Next.js 16.0 with Turbopack
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS with custom OKLCH color system
+- **UI Components**: Radix UI primitives
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+
+### **Backend & Services**
+- **Database**: Firebase Firestore (Real-time NoSQL)
+- **Authentication**: Firebase Auth
+- **Storage**: Cloudinary (Image/Media hosting)
+- **AI**: Google Gemini AI API
+- **Video**: YouTube Data API v3
+
+### **Key Libraries**
+- `react-hook-form` + `zod` - Form validation
+- `date-fns` - Date formatting
+- `react-markdown` + `remark-gfm` - Markdown rendering
+- `@vercel/analytics` - Performance monitoring
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ and npm/pnpm
-- Firebase project
-- Google Gemini API key
-- YouTube Data API key
+```bash
+node >= 18.0.0
+npm or pnpm
+```
 
-### Step 1: Install Dependencies
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd campus-world
+```
+
+2. **Install dependencies**
 ```bash
 npm install
 # or
 pnpm install
 ```
 
-Already installed:
-- `@google/generative-ai` - Gemini AI SDK
-- `react-player` - Video playback
-- `react-dropzone` - File uploads
-- `axios` - HTTP client
+3. **Environment Setup**
 
-### Step 2: Environment Variables
-
-Create `.env.local` in the root directory:
+Create a `.env.local` file with the following variables:
 
 ```env
 # Firebase Configuration
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
-# Google APIs
+# Google Gemini AI
 NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key
+
+# YouTube API
 NEXT_PUBLIC_YOUTUBE_API_KEY=your_youtube_api_key
+
+# Cloudinary
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 ```
 
-### Step 3: Firebase Setup
+4. **Firebase Setup**
+- Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+- Enable Firestore Database
+- Enable Authentication (Email/Password)
+- Copy the configuration values to `.env.example`
+- Deploy security rules from `firestore.rules`
 
-#### Firestore Rules
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read: if request.auth != null;
-    }
-    
-    match /threads/{threadId} {
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth.uid == resource.data.authorId;
-    }
-    
-    match /comments/{commentId} {
-      allow create: if request.auth != null;
-      allow update: if request.auth.uid == resource.data.authorId;
-      allow delete: if request.auth.uid == resource.data.authorId;
-    }
-    
-    match /canteenPosts/{postId} {
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-    }
-    
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if request.auth.uid == userId;
-    }
-    
-    match /bookmarks/{bookmarkId} {
-      allow read, write: if request.auth.uid == resource.data.userId;
-    }
-  }
-}
-```
-
-#### Storage Rules
-```javascript
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null 
-                   && request.resource.size < 10 * 1024 * 1024
-                   && request.resource.contentType.matches('image/.*|video/.*');
-    }
-  }
-}
-```
-
-### Step 4: Deploy Enhanced Pages
-
-The enhanced pages are in `enhanced-pages/` directory. To use them:
-
-```bash
-# Backup originals
-cp app/quad/page.tsx app/quad/page.backup.tsx
-
-# Deploy enhanced version
-cp enhanced-pages/quad-enhanced.tsx app/quad/page.tsx
-```
-
-Or manually review and integrate the changes.
-
-### Step 5: Run the Application
-
+5. **Run Development Server**
 ```bash
 npm run dev
 # or
 pnpm dev
 ```
 
-Visit `http://localhost:3000`
-
-## 🎯 Features Guide
-
-### The Quad - Creating Threads
-
-1. Click "Create Thread" button
-2. Toggle "Post Anonymously" if desired
-3. Select a category (Academic, Social, Support, Rant, Question)
-4. Add optional Content Warning (e.g., "Mental Health")
-5. Enter title and content
-6. Add tags for better discovery
-7. Click "Create Thread"
-
-**Voting**: Click up/down arrows to vote on threads and comments
-**Comments**: Click on a thread to expand and add comments
-**Search**: Use the search bar to find threads by keywords or tags
-
-### The Lab - AI Learning
-
-#### Get an Explanation
-```typescript
-import { generateTopicExplanation } from '@/lib/gemini'
-
-const explanation = await generateTopicExplanation(
-  "Machine Learning", 
-  "intermediate"
-)
-```
-
-#### Find YouTube Videos
-```typescript
-import { searchEducationalVideos } from '@/lib/youtube'
-
-const videos = await searchEducationalVideos("React Hooks", 10)
-```
-
-#### Generate a Quiz
-```typescript
-import { generateQuizQuestions } from '@/lib/gemini'
-
-const quiz = await generateQuizQuestions("Data Structures", 5)
-```
-
-#### Chat with AI
-```typescript
-import { chatWithAI } from '@/lib/gemini'
-
-const response = await chatWithAI(messages, "We're discussing algorithms")
-```
-
-### The Canteen - Social Posts
-
-1. Click the post input area
-2. Choose post type:
-   - Text/Confession
-   - Photo (upload or drag & drop)
-   - Video (MP4, WebM)
-   - Poll (add options)
-3. Toggle anonymous mode if desired
-4. Click "Post" or "Blast"
-
-**Interactions**:
-- ❤️ Like/Unlike posts
-- 💬 Add comments
-- 🔗 Share content
-- ⏱️ Posts expire after 24 hours
-
-### File Uploads
-
-```typescript
-import { uploadFile, validateFile } from '@/lib/storage'
-
-// Validate before upload
-const validation = validateFile(file, 10) // 10MB max
-if (!validation.valid) {
-  console.error(validation.error)
-  return
-}
-
-// Upload
-const result = await uploadFile(file, 'canteen', userId)
-console.log(result.url) // Download URL
-```
-
-## 🏗️ Project Structure
-
-```
-campus-world/
-├── app/                      # Next.js app directory
-│   ├── quad/                 # Forum pages
-│   ├── lab/                  # Learning pages
-│   ├── canteen/              # Social pages
-│   ├── library/              # Resource pages
-│   └── notice-board/         # Announcement pages
-├── components/               # Reusable UI components
-│   ├── ui/                   # Shadcn UI components
-│   └── campus-sidebar.tsx    # Navigation
-├── context/                  # React contexts
-│   └── AuthContext.tsx       # Authentication
-├── lib/                      # Core utilities
-│   ├── firebase.ts           # Firebase config
-│   ├── firestore.ts          # Database operations
-│   ├── gemini.ts             # Gemini AI service
-│   ├── youtube.ts            # YouTube API service
-│   ├── storage.ts            # File uploads
-│   └── utils.ts              # Helpers
-├── enhanced-pages/           # Enhanced page versions
-└── public/                   # Static assets
-```
-
-## 🔧 API Services
-
-### Gemini AI (`lib/gemini.ts`)
-- `generateTopicExplanation()` - Get AI explanations
-- `generateLearningPath()` - Create learning paths
-- `generateQuizQuestions()` - Generate quizzes
-- `chatWithAI()` - Interactive AI chat
-- `solveProblem()` - Step-by-step solutions
-- `generatePracticeProblems()` - Create practice problems
-- `getStudyTips()` - Get study advice
-- `summarizeContent()` - Summarize text
-
-### YouTube (`lib/youtube.ts`)
-- `searchEducationalVideos()` - Find videos
-- `searchPlaylists()` - Find playlists
-- `getPlaylistVideos()` - Get videos from playlist
-- `searchChannels()` - Find educational channels
-- `getRecommendedVideos()` - Get recommendations by difficulty
-
-### Storage (`lib/storage.ts`)
-- `uploadFile()` - Upload single file
-- `uploadMultipleFiles()` - Upload multiple files
-- `deleteFile()` - Delete file
-- `validateFile()` - Validate file type/size
-- `compressImage()` - Compress images before upload
-
-### Firestore (`lib/firestore.ts`)
-
-#### Threads
-- `createThread()` - Create new thread
-- `getThreads()` - Get all threads
-- `voteThread()` - Vote on thread
-- `updateThreadViews()` - Track views
-
-#### Comments
-- `createComment()` - Add comment
-- `getThreadComments()` - Get all comments for thread
-- `voteComment()` - Vote on comment
-
-#### Canteen
-- `createCanteenPost()` - Create post
-- `likeCanteenPostEnhanced()` - Like/unlike with tracking
-- `shareCanteenPost()` - Track shares
-
-#### Bookmarks
-- `createBookmark()` - Save content
-- `getUserBookmarks()` - Get user's bookmarks
-- `deleteBookmark()` - Remove bookmark
-
-#### AI Conversations
-- `saveAIConversation()` - Save chat history
-- `getUserAIConversations()` - Get user's conversations
-
-## 🎨 UI Components
-
-### Custom Components
-- Thread cards with voting
-- Comment trees (nested)
-- File upload dropzones
-- Poll creator and viewer
-- Video player embeds
-- Anonymous mode toggle
-- Content warning badges
-- Category filters
-- Search bars
-
-### Shadcn UI Components Used
-- Card, Button, Input, Textarea
-- Tabs, Badge, Avatar
-- Dialog, Sheet, Drawer
-- Switch, Label, Select
-- And many more...
-
-## 🔐 Security Features
-
-1. **Authentication**: All writes require authentication
-2. **File Validation**: Type and size checks on uploads
-3. **Content Sanitization**: XSS protection
-4. **Rate Limiting**: Prevent API abuse (future)
-5. **Privacy**: Anonymous mode hides user identity
-6. **Moderation**: Report system (future enhancement)
-
-## 📊 Database Schema
-
-### Collections
-
-#### threads
-```typescript
-{
-  id: string
-  title: string
-  content: string
-  author: string
-  authorId: string
-  isAnonymous: boolean
-  category: string
-  tags: string[]
-  contentWarning?: string
-  score: number
-  upvotes: number
-  downvotes: number
-  commentCount: number
-  viewCount: number
-  isPinned: boolean
-  isLocked: boolean
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
-```
-
-#### comments
-```typescript
-{
-  id: string
-  threadId: string
-  parentId?: string
-  content: string
-  author: string
-  authorId: string
-  isAnonymous: boolean
-  score: number
-  depth: number
-  isEdited: boolean
-  isDeleted: boolean
-  createdAt: Timestamp
-  updatedAt: Timestamp
-}
-```
-
-#### canteenPosts
-```typescript
-{
-  id: string
-  type: "confession" | "meme" | "photo" | "video" | "poll" | "story"
-  content: string
-  mediaUrl?: string
-  mediaType?: "image" | "video"
-  authorId: string
-  author: string
-  isAnonymous: boolean
-  likes: number
-  likedBy: string[]
-  comments: number
-  shares: number
-  pollData?: {
-    question: string
-    options: { id: string; text: string; votes: number }[]
-  }
-  expiresAt: Timestamp
-  createdAt: Timestamp
-}
-```
-
-#### polls
-```typescript
-{
-  id: string
-  question: string
-  options: { id: string; text: string; votes: number }[]
-  authorId: string
-  isAnonymous: boolean
-  allowMultiple: boolean
-  expiresAt: Timestamp
-  totalVotes: number
-  createdAt: Timestamp
-}
-```
-
-#### bookmarks
-```typescript
-{
-  id: string
-  userId: string
-  type: "thread" | "subject" | "unit" | "topic" | "video"
-  referenceId: string
-  createdAt: Timestamp
-}
-```
-
-#### aiConversations
-```typescript
-{
-  id: string
-  userId: string
-  type: "learning" | "quiz" | "explanation" | "help"
-  topic: string
-  messages: { role: "user" | "ai"; content: string; timestamp: number }[]
-  relatedVideos?: string[]
-  createdAt: Timestamp
-}
-```
-
-#### youtubeCache
-```typescript
-{
-  id: string
-  topic: string
-  videos: YouTubeVideo[]
-  createdAt: Timestamp
-  expiresAt: Timestamp
-}
-```
-
-## 🚀 Performance Optimizations
-
-1. **Firestore Caching**: Offline persistence enabled
-2. **YouTube Caching**: Results cached for 7 days
-3. **Image Compression**: Auto-compress before upload
-4. **Lazy Loading**: Components load on demand
-5. **Real-time Subscriptions**: Efficient Firestore listeners
-6. **Pagination**: Queries limited to 50 items
-7. **Debounced Search**: Reduce API calls
-
-## 🧪 Testing
-
-### Manual Testing Checklist
-
-#### Quad
-- [ ] Create thread with username
-- [ ] Create thread anonymously
-- [ ] Add content warning
-- [ ] Add multiple tags
-- [ ] Upvote/downvote threads
-- [ ] Add top-level comment
-- [ ] Reply to comment (nested)
-- [ ] Vote on comments
-- [ ] Search threads
-- [ ] Filter by category
-- [ ] Test Hot/Best/New/Top sorting
-
-#### Lab
-- [ ] Generate topic explanation
-- [ ] Create learning path
-- [ ] Generate quiz
-- [ ] Chat with AI
-- [ ] Solve problem with AI
-- [ ] Find YouTube videos
-- [ ] Find playlists
-- [ ] Start and complete quest
-- [ ] Track XP progression
-
-#### Canteen
-- [ ] Create text post
-- [ ] Upload image
-- [ ] Upload video
-- [ ] Create poll
-- [ ] Vote on poll
-- [ ] Like/unlike post
-- [ ] Add comment
-- [ ] Share post
-- [ ] Test post expiration
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**1. "Firebase unavailable" errors**
-- Check internet connection
-- Verify Firebase config in `.env.local`
-- Ensure Firestore is initialized properly
-
-**2. "AI not responding"**
-- Verify Gemini API key
-- Check API quota/limits
-- Review console for errors
-
-**3. "YouTube videos not loading"**
-- Verify YouTube API key
-- Check API quota
-- Ensure CORS is configured
-
-**4. "File upload fails"**
-- Check file size (max 10MB)
-- Verify file type (images/videos only)
-- Check Firebase Storage rules
-
-**5. "Anonymous mode not working"**
-- Clear browser cache
-- Check user authentication
-- Verify Firestore rules
-
-## 📈 Future Enhancements
-
-- [ ] Push notifications for mentions/replies
-- [ ] Extended user profiles
-- [ ] Direct messaging
-- [ ] Content moderation tools
-- [ ] Advanced analytics dashboard
-- [ ] Mobile app (React Native)
-- [ ] Gamification system
-- [ ] Study group features
-- [ ] Calendar integration
-- [ ] Email notifications
-
-## 🤝 Contributing
-
-This project was built for the Google Hackathon 2026. Contributions are welcome!
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is built for educational purposes.
-
-## 🙏 Acknowledgments
-
-- **Google Gemini AI** for powering the learning features
-- **YouTube Data API** for educational video discovery
-- **Firebase** for backend services
-- **Next.js** for the amazing framework
-- **Shadcn UI** for beautiful components
-- **Radix UI** for accessible primitives
-
-## 📞 Support
-
-For issues or questions:
-- Check the [Implementation Guide](./IMPLEMENTATION_GUIDE.md)
-- Review Firebase Console logs
-- Check browser console for errors
+Visit [http://localhost:3000](http://localhost:3000)
+
+## 🎯 Key Highlights
+
+### 🏆 **Innovation**
+- **AI-Powered Learning**: Integration with Google Gemini for personalized education
+- **Unified Platform**: All campus needs in one place
+- **Gamification**: XP system to encourage learning
+- **Real-time Collaboration**: Live updates using Firestore subscriptions
+
+### 💪 **Technical Excellence**
+- **Scalable Architecture**:
+  - Modular component structure
+  - Type-safe with TypeScript
+  - Reusable utility functions
+- **Robust State Management**:
+  - React Context for global state
+  - Local state with hooks
+  - Persistent storage with Firestore
+
+### 🔒 **Security**
+- **Firebase Rules**: Granular access control
+- **Authentication**: Secure user management
+- **Vote Tracking**: Prevents duplicate votes with user arrays
+- **Admin Verification**: Notice board moderation system
 
 ---
-
-**Built with ❤️ for Google Hackathon 2026**
-
-**Tech Stack**: Next.js 14, TypeScript, Firebase, Gemini AI, YouTube API, Tailwind CSS

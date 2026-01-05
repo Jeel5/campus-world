@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { 
   Trophy, Zap, Brain, ArrowRight, CheckCircle2, Cpu, Timer, 
   BookOpen, Video, MessageSquare, Sparkles, Search, Play, 
-  X, Loader2, Youtube, ChevronRight, Star, Target, Award, History, Clock
+  X, Loader2, Youtube, ChevronRight, Star, Target, Award, History, Clock, FlaskConical
 } from "lucide-react"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { Card, CardContent } from "@/components/ui/card"
@@ -362,7 +362,10 @@ export default function LabPage() {
             <div className="max-w-2xl">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-8 h-px bg-emerald-700/40" />
-                <span className="text-emerald-200/60 text-xs font-medium tracking-wide">AI-Powered Learning Lab</span>
+                <span className="text-emerald-200/60 text-xs font-medium tracking-wide flex items-center gap-2">
+                  <FlaskConical className="w-3 h-3" />
+                  AI-Powered Learning Lab
+                </span>
               </div>
               <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-3 leading-tight">
                 The Lab
@@ -387,26 +390,26 @@ export default function LabPage() {
 
           {/* Mode Tabs */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-[#1a1e24] border border-emerald-700/20">
-              <TabsTrigger value="explore" className="data-[state=active]:bg-emerald-600">
+            <TabsList className="flex flex-col sm:grid sm:grid-cols-5 w-full bg-[#1a1e24] border border-emerald-700/20 gap-2 sm:gap-0 p-2 sm:p-0.5">
+              <TabsTrigger value="explore" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
                 <Target className="w-4 h-4 mr-2" />
-                Explore
+                <span>Explore</span>
               </TabsTrigger>
-              <TabsTrigger value="learn" className="data-[state=active]:bg-emerald-600">
+              <TabsTrigger value="learn" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
                 <Brain className="w-4 h-4 mr-2" />
-                Learn
+                <span>Learn</span>
               </TabsTrigger>
-              <TabsTrigger value="quiz" className="data-[state=active]:bg-emerald-600">
+              <TabsTrigger value="quiz" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
                 <Award className="w-4 h-4 mr-2" />
-                Quiz
+                <span>Quiz</span>
               </TabsTrigger>
-              <TabsTrigger value="chat" className="data-[state=active]:bg-emerald-600">
+              <TabsTrigger value="chat" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
                 <MessageSquare className="w-4 h-4 mr-2" />
-                Chat
+                <span>Chat</span>
               </TabsTrigger>
-              <TabsTrigger value="videos" className="data-[state=active]:bg-emerald-600">
+              <TabsTrigger value="videos" className="data-[state=active]:bg-emerald-600 text-xs sm:text-sm w-full justify-start sm:justify-center flex items-center">
                 <Youtube className="w-4 h-4 mr-2" />
-                Videos
+                <span>Videos</span>
               </TabsTrigger>
             </TabsList>
 
@@ -797,7 +800,7 @@ export default function LabPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", damping: 25 }}
-              className="relative w-full max-w-5xl lg:max-w-6xl bg-[#1a1e24] rounded-lg lg:rounded-xl overflow-hidden shadow-2xl"
+              className="relative w-[95vw] sm:w-full max-w-5xl lg:max-w-6xl bg-[#1a1e24] rounded-lg lg:rounded-xl overflow-hidden shadow-2xl mx-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
@@ -807,6 +810,7 @@ export default function LabPage() {
                   title={selectedVideo.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
                   style={{ border: 'none' }}
                 />
               </div>
