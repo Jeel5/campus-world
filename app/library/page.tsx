@@ -1,179 +1,385 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Search, Filter, BookOpen, Clock, Users, ArrowUpRight, Plus } from "lucide-react"
-import Link from "next/link"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  Search,
+  BookOpen,
+  Home,
+  ChevronRight,
+  ArrowLeft,
+  Grid3x3,
+  List,
+  SortAsc,
+} from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { getSubjects, getUnits, subscribeToCollection, type Subject, type Unit, COLLECTIONS } from "@/lib/firestore"
-import { where } from "firebase/firestore"
+import {
+  getDepartments,
+  getSemesters,
+  getSubjects,
+  searchSubjects,
+  type Department,
+  type Semester,
+  type Subject,
+} from "@/lib/library-service"
+import { DepartmentCard } from "@/components/library/DepartmentCard"
+import { SemesterSection } from "@/components/library/SemesterSection"
+import { SubjectCard } from "@/components/library/SubjectCard"
+import { ContentDashboard } from "@/components/library/ContentDashboard"
+
+type ViewState = "departments" | "semesters" | "subjects" | "content"
+
+interface BreadcrumbItem {
+  label: string
+  onClick: () => void
+}
 
 export default function LibraryPage() {
+  // State management
+  const [viewState, setViewState] = useState<ViewState>("departments")
   const [searchQuery, setSearchQuery] = useState("")
-  const [subjects, setSubjects] = useState<Subject[]>([])
-  const [unitsMap, setUnitsMap] = useState<Record<string, Unit[]>>({})
   const [loading, setLoading] = useState(true)
+  const [sortBy, setSortBy] = useState<"name" | "code">("name")
 
+  // Data state
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [semesters, setSemesters] = useState<Semester[]>([])
+  const [subjects, setSubjects] = useState<Subject[]>([])
+  const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({})
+
+  // Selection state
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null)
+  const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null)
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null)
+  const [expandedSemester, setExpandedSemester] = useState<string | null>(null)
+
+  // Load departments on mount
   useEffect(() => {
-    // Subscribe to subjects
-    const unsubscribeSubjects = subscribeToCollection<Subject>(COLLECTIONS.SUBJECTS, [], (subjectsData) => {
-      setSubjects(subjectsData)
-      
-      // Load units for each subject
-      subjectsData.forEach(async (subject) => {
-        const units = await getUnits(subject.id)
-        setUnitsMap((prev) => ({ ...prev, [subject.id]: units }))
-      })
-      
-      setLoading(false)
-    })
-
-    return () => unsubscribeSubjects()
+    loadDepartments()
   }, [])
+
+  // Search functionality
+  useEffect(() => {
+    if (searchQuery && viewState === "subjects") {
+      const delayDebounce = setTimeout(() => {
+        searchSubjects(searchQuery).then((results) => {
+          setSubjects(results)
+        })
+      }, 300)
+      return () => clearTimeout(delayDebounce)
+    }
+  }, [searchQuery, viewState])
+
+  async function loadDepartments() {
+    setLoading(true)
+    const depts = await getDepartments()
+    setDepartments(depts)
+    setLoading(false)
+  }
+
+  async function handleDepartmentClick(department: Department) {
+    setSelectedDepartment(department)
+    setViewState("semesters")
+    setLoading(true)
+
+    const sems = await getSemesters(department.id)
+    
+    // Load subject counts for each semester
+    const counts: Record<string, number> = {}
+    await Promise.all(
+      sems.map(async (sem) => {
+        const subjects = await getSubjects(department.id, sem.id)
+        counts[sem.id] = subjects.length
+      })
+    )
+
+    setSemesters(sems)
+    setSubjectCounts(counts)
+    setLoading(false)
+  }
+
+  async function handleSemesterClick(semester: Semester) {
+    if (!selectedDepartment) return
+
+    setSelectedSemester(semester)
+    setViewState("subjects")
+    setLoading(true)
+
+    const subs = await getSubjects(selectedDepartment.id, semester.id)
+    setSubjects(subs)
+    setLoading(false)
+  }
+
+  function handleSubjectClick(subject: Subject) {
+    setSelectedSubject(subject)
+    setViewState("content")
+  }
+
+  function handleBackToDepartments() {
+    setViewState("departments")
+    setSelectedDepartment(null)
+    setSemesters([])
+  }
+
+  function handleBackToSemesters() {
+    setViewState("semesters")
+    setSelectedSemester(null)
+    setSubjects([])
+  }
+
+  function handleCloseContent() {
+    setSelectedSubject(null)
+    setViewState("subjects")
+  }
+
+  // Breadcrumb navigation
+  const breadcrumbs: BreadcrumbItem[] = [
+    { label: "Library", onClick: handleBackToDepartments },
+  ]
+  if (selectedDepartment) {
+    breadcrumbs.push({
+      label: selectedDepartment.name,
+      onClick: handleBackToSemesters,
+    })
+  }
+  if (selectedSemester) {
+    breadcrumbs.push({
+      label: selectedSemester.name,
+      onClick: () => setViewState("subjects"),
+    })
+  }
+
+  // Sort subjects
+  const sortedSubjects = [...subjects].sort((a, b) => {
+    if (sortBy === "name") {
+      return a.name.localeCompare(b.name)
+    }
+    return a.code.localeCompare(b.code)
+  })
 
   return (
     <div className="relative min-h-screen bg-[#111317] text-[#E6E6E3] overflow-x-hidden">
-      {/* Warm Background */}
+      {/* Background */}
       <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#16181d] via-[#11140f] to-[#13161a]" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_25%_25%,rgba(245,158,11,0.08),transparent_40%)]" />
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_75%_60%,rgba(251,191,36,0.06),transparent_35%)]" />
-      
+
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-10">
-      <header className="mb-6 space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-xs uppercase tracking-[0.3em] text-amber-200">
-          <BookOpen className="w-4 h-4" /> Knowledge sanctuary
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight text-white">
-            The Library — where learning feels warm.
-          </h1>
-          <p className="text-white/70 text-sm sm:text-base md:text-lg max-w-3xl">
-            Curated resources, study materials, and comprehensive notes. Everything organized, nothing overwhelming.
-          </p>
-        </div>
-      </header>
-      
-      <div className="mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex flex-col sm:flex-row gap-3"
-        >
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
-            <Input
-              className="pl-12 h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/40"
-              placeholder="Search resources, subjects, or topics..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+        {/* Header */}
+        <header className="mb-8 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-xs uppercase tracking-[0.3em] text-amber-200">
+            <BookOpen className="w-4 h-4" /> Knowledge Sanctuary
           </div>
-          <Button className="h-12 px-6 rounded-2xl bg-amber-900/60 hover:bg-amber-900/70 text-amber-100 border border-amber-800">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </Button>
-        </motion.div>
-      </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight text-white">
+              The Library
+            </h1>
+            <p className="text-white/70 text-sm sm:text-base md:text-lg max-w-3xl">
+              Comprehensive resources organized by department, semester, and subject. Everything you need to excel in your studies.
+            </p>
+          </div>
+        </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-        {loading ? (
-          <Card className="col-span-full bg-[#15181d] border border-white/5 rounded-3xl p-12 sm:p-16 lg:p-20 text-center">
-            <div className="animate-spin w-12 h-12 border-4 border-amber-700 border-t-transparent rounded-full mx-auto" />
-          </Card>
-        ) : subjects.length === 0 ? (
-          <Card className="col-span-full bg-[#15181d] border border-white/5 rounded-3xl p-12 sm:p-16 lg:p-20 text-center">
-            <p className="text-white/60 text-base">No subjects available. Check back soon!</p>
-          </Card>
-        ) : (
-          subjects.map((subject, sIdx) => (
-            <div key={subject.id} className="space-y-4 sm:space-y-6">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: sIdx * 0.1 }}
-                className="flex items-center justify-between px-2 sm:px-4"
-              >
-                <h2 className="text-lg sm:text-xl font-bold text-white">{subject.name}</h2>
-                <Badge className="bg-amber-900/40 text-amber-100 border-amber-800 text-xs whitespace-nowrap">
-                  {unitsMap[subject.id]?.length || 0} Units
-                </Badge>
-              </motion.div>
-
-              <div className="space-y-2 sm:space-y-3">
-                {unitsMap[subject.id]?.map((unit, uIdx) => (
-                  <Link key={unit.id} href={`/library/${subject.id}/${unit.id}`}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: sIdx * 0.08 + uIdx * 0.04 }}
-                    >
-                      <Card className="bg-[#15181d] border border-white/5 hover:bg-[#181b21] transition-all rounded-xl sm:rounded-2xl overflow-hidden group shadow-sm">
-                        <CardContent className="p-4 sm:p-5 lg:p-6">
-                          <div className="flex items-start justify-between mb-2 sm:mb-3">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center bg-amber-900/30">
-                              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-amber-200" />
-                            </div>
-                            <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-white/30 group-hover:text-amber-200 transition-all group-hover:translate-x-1 group-hover:-translate-y-1" />
-                          </div>
-                          <h3 className="text-base sm:text-lg font-bold text-white mb-1.5 sm:mb-2 group-hover:text-amber-100 transition-colors line-clamp-2">
-                            {unit.name}
-                          </h3>
-                          <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed line-clamp-2">
-                            Lecture notes, curated resources, and peer support.
-                          </p>
-                          <div className="flex items-center gap-3 sm:gap-4 text-xs text-white/50">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>{unit.books} Topics</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5" />
-                              <span>{unit.students} Students</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))
+        {/* Breadcrumb Navigation */}
+        {viewState !== "departments" && viewState !== "content" && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6"
+          >
+            <nav className="flex items-center gap-2 text-sm">
+              {breadcrumbs.map((crumb, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  {idx > 0 && <ChevronRight className="w-4 h-4 text-white/30" />}
+                  <button
+                    onClick={crumb.onClick}
+                    className="text-white/60 hover:text-white transition-colors"
+                  >
+                    {crumb.label}
+                  </button>
+                </div>
+              ))}
+            </nav>
+          </motion.div>
         )}
 
-        {/* Library Stats / Sidebar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="space-y-3 sm:space-y-4 md:col-span-2 xl:col-span-1"
-        >
-          <Card className="bg-gradient-to-br from-amber-900/40 to-amber-950/20 border border-amber-800/50 p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl text-white overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-            <h4 className="text-xs uppercase tracking-[0.3em] text-amber-200 mb-4 sm:mb-6">Library stats</h4>
-            <div className="space-y-4 sm:space-y-6">
-              <div>
-                <div className="text-3xl sm:text-4xl font-black mb-1">1.2k</div>
-                <div className="text-xs text-white/70">Verified Notes</div>
+        {/* Search & Controls */}
+        {(viewState === "subjects" || viewState === "departments") && (
+          <div className="mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col sm:flex-row gap-3"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+                <Input
+                  className="pl-12 h-12 bg-white/5 border-white/10 rounded-2xl text-white placeholder:text-white/40 focus:border-white/20"
+                  placeholder={
+                    viewState === "subjects"
+                      ? "Search subjects..."
+                      : "Search departments..."
+                  }
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <div>
-                <div className="text-3xl sm:text-4xl font-black mb-1">850</div>
-                <div className="text-xs text-white/70">Study Hours Recorded</div>
-              </div>
-            </div>
-          </Card>
+              {viewState === "subjects" && (
+                <Button
+                  onClick={() => setSortBy(sortBy === "name" ? "code" : "name")}
+                  className="h-12 px-6 rounded-2xl bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                >
+                  <SortAsc className="w-4 h-4 mr-2" />
+                  Sort by {sortBy === "name" ? "Code" : "Name"}
+                </Button>
+              )}
+            </motion.div>
+          </div>
+        )}
 
-          <Button className="w-full h-16 sm:h-20 rounded-xl sm:rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 font-bold uppercase tracking-wider text-xs sm:text-sm group px-4">
-            <span className="truncate">Contribute to Library</span>
-            <Plus className="w-5 h-5 ml-2 sm:ml-4 group-hover:rotate-180 transition-transform duration-500 flex-shrink-0" />
-          </Button>
-        </motion.div>
-      </div>
+        {/* Main Content */}
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-center py-20"
+            >
+              <div className="space-y-4 text-center">
+                <div className="animate-spin w-12 h-12 border-4 border-amber-700 border-t-transparent rounded-full mx-auto" />
+                <p className="text-white/60 text-sm">Loading...</p>
+              </div>
+            </motion.div>
+          ) : (
+            <>
+              {/* Departments View */}
+              {viewState === "departments" && (
+                <motion.div
+                  key="departments"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                    {departments.map((dept, idx) => (
+                      <DepartmentCard
+                        key={dept.id}
+                        department={dept}
+                        onClick={() => handleDepartmentClick(dept)}
+                        index={idx}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Semesters View */}
+              {viewState === "semesters" && selectedDepartment && (
+                <motion.div
+                  key="semesters"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button
+                      onClick={handleBackToDepartments}
+                      variant="ghost"
+                      className="text-white/60 hover:text-white hover:bg-white/5"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Departments
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {semesters.map((sem) => (
+                      <SemesterSection
+                        key={sem.id}
+                        semester={sem}
+                        departmentColor={selectedDepartment.color}
+                        isExpanded={expandedSemester === sem.id}
+                        onToggle={() =>
+                          setExpandedSemester(
+                            expandedSemester === sem.id ? null : sem.id
+                          )
+                        }
+                        onSelect={() => handleSemesterClick(sem)}
+                        subjectCount={subjectCounts[sem.id] || 0}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Subjects View */}
+              {viewState === "subjects" && selectedDepartment && selectedSemester && (
+                <motion.div
+                  key="subjects"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    <Button
+                      onClick={handleBackToSemesters}
+                      variant="ghost"
+                      className="text-white/60 hover:text-white hover:bg-white/5"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to Semesters
+                    </Button>
+                  </div>
+
+                  {sortedSubjects.length === 0 ? (
+                    <Card className="bg-white/[0.03] border-0 p-12 text-center">
+                      <BookOpen className="w-12 h-12 text-white/30 mx-auto mb-4" />
+                      <p className="text-white/60">
+                        {searchQuery
+                          ? "No subjects match your search"
+                          : "No subjects available yet"}
+                      </p>
+                    </Card>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                      {sortedSubjects.map((subject, idx) => (
+                        <SubjectCard
+                          key={subject.id}
+                          subject={subject}
+                          departmentColor={selectedDepartment.color}
+                          onClick={() => handleSubjectClick(subject)}
+                          index={idx}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Content Dashboard Modal */}
+        <AnimatePresence>
+          {viewState === "content" && selectedSubject && selectedDepartment && (
+            <ContentDashboard
+              key="content"
+              subject={selectedSubject}
+              departmentColor={selectedDepartment.color}
+              onClose={handleCloseContent}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
