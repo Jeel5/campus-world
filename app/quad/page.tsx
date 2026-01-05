@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   MessageSquare,
@@ -63,6 +64,7 @@ const categories = [
 
 export default function EnhancedQuadPage() {
   const { user, signInAnonymous } = useAuth()
+  const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState("hot")
   const [activeCategory, setActiveCategory] = useState("all")
   const [threads, setThreads] = useState<Thread[]>([])
@@ -82,6 +84,10 @@ export default function EnhancedQuadPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const constraints =
@@ -591,8 +597,15 @@ export default function EnhancedQuadPage() {
         </div>
       </div>
 
-      {showComposer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+      {mounted && showComposer && createPortal(
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          style={{ zIndex: 999999, position: 'fixed', inset: 0 }}
+          className="flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowComposer(false)}
+        >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -710,7 +723,8 @@ export default function EnhancedQuadPage() {
               </div>
             </div>
           </motion.div>
-        </div>
+        </motion.div>,
+        document.body
       )}
     </div>
   )

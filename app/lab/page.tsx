@@ -831,15 +831,15 @@ export default function LabPage() {
         )}
 
         {/* History Modal */}
-        <AnimatePresence mode="wait">
-          {showHistory && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/95 backdrop-blur-md z-[9999] flex items-center justify-center p-2 sm:p-4 lg:p-8"
-              onClick={() => setShowHistory(false)}
-            >
+        {mounted && showHistory && createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ zIndex: 999999, position: 'fixed', inset: 0 }}
+            className="bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 lg:p-8"
+            onClick={() => setShowHistory(false)}
+          >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -1003,9 +1003,9 @@ export default function LabPage() {
                   )}
                 </div>
               </motion.div>
-            </motion.div>
+            </motion.div>,
+            document.body
           )}
-        </AnimatePresence>
       </div>
     </div>
   )

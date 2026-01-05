@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { type Subject, type CuratedLink, validateLinks } from "@/lib/library-service"
 import {
@@ -30,8 +31,13 @@ interface ContentDashboardProps {
 }
 
 export function ContentDashboard({ subject, departmentColor, onClose }: ContentDashboardProps) {
+  const [mounted, setMounted] = useState(false)
   const [validatedLinks, setValidatedLinks] = useState<CuratedLink[]>([])
   const [validatingLinks, setValidatingLinks] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (subject.contents?.curatedLinks) {
@@ -68,12 +74,13 @@ export function ContentDashboard({ subject, departmentColor, onClose }: ContentD
     }
   }
 
-  return (
+  return mounted ? createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      style={{ zIndex: 999999, position: 'fixed', inset: 0 }}
+      className="bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
@@ -409,8 +416,9 @@ export function ContentDashboard({ subject, departmentColor, onClose }: ContentD
           </div>
         </Card>
       </motion.div>
-    </motion.div>
-  )
+    </motion.div>,
+    document.body
+  ) : null
 }
 
 function EmptyState({ icon: Icon, message }: { icon: any; message: string }) {

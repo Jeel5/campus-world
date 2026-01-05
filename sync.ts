@@ -292,6 +292,20 @@ async function syncFirebaseDatabase() {
     });
     console.log('✅ Video history collection created\n');
 
+    // 15. Create Material Contributions Collection
+    console.log('📝 Creating materialContributions collection...');
+    await setDoc(doc(collection(db, 'materialContributions'), 'sample-contribution'), {
+      userId: 'system',
+      username: 'Campus World',
+      title: 'Complete Data Structures Notes',
+      description: 'Comprehensive notes covering all DS topics',
+      url: 'https://example.com/ds-notes.pdf',
+      type: 'notes',
+      status: 'pending',
+      createdAt: serverTimestamp()
+    });
+    console.log('✅ Material contributions collection created\n');
+
     console.log('🎉 DATABASE SYNC COMPLETED SUCCESSFULLY!\n');
     console.log('📋 Collections Created:');
     console.log('   1. ✅ threads');
@@ -308,6 +322,7 @@ async function syncFirebaseDatabase() {
     console.log('   12. ✅ quizHistory');
     console.log('   13. ✅ chatHistory');
     console.log('   14. ✅ videoHistory\n');
+    console.log('   15. ✅ materialContributions\n');
     console.log('📋 Next Steps:');
     console.log('1. Go to Firebase Console → Firestore → Indexes');
     console.log('2. Click on any error links to create composite indexes');

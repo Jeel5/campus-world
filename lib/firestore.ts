@@ -42,6 +42,7 @@ export const COLLECTIONS = {
   QUIZ_HISTORY: "quizHistory",
   CHAT_HISTORY: "chatHistory",
   VIDEO_HISTORY: "videoHistory",
+  MATERIAL_CONTRIBUTIONS: "materialContributions",
 } as const
 
 // Types
@@ -600,6 +601,18 @@ export interface VideoHistory {
   createdAt: Timestamp
 }
 
+export interface MaterialContribution {
+  id: string
+  userId: string
+  username: string
+  title: string
+  description: string
+  url: string
+  type: "notes" | "video" | "book" | "article"
+  status: "pending" | "approved" | "rejected"
+  createdAt: Timestamp
+}
+
 // Lab History operations
 export async function saveLearnHistory(userId: string, data: Omit<LearnHistory, "id" | "userId" | "createdAt">) {
   return createDocument<LearnHistory>(COLLECTIONS.LEARN_HISTORY, { ...data, userId })
@@ -647,4 +660,25 @@ export async function getVideoHistory(userId: string, limit_count: number = 100)
     orderBy("createdAt", "desc"),
     limit(limit_count),
   ])
+}
+
+// Material Contributions
+export async function submitMaterialContribution(
+  userId: string,
+  username: string,
+  data: { title: string; description: string; url: string; type: "notes" | "video" | "book" | "article" }
+) {
+  return createDocument<MaterialContribution>(COLLECTIONS.MATERIAL_CONTRIBUTIONS, {
+    ...data,
+    userId,
+    username,
+    status: "pending",
+  })
+}
+
+export async function getMaterialContributions(userId?: string) {
+  const constraints = userId
+    ? [where("userId", "==", userId), orderBy("createdAt", "desc")]
+    : [orderBy("createdAt", "desc"), limit(50)]
+  return getDocuments<MaterialContribution>(COLLECTIONS.MATERIAL_CONTRIBUTIONS, constraints)
 }
