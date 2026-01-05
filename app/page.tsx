@@ -139,60 +139,62 @@ export default function CampusMapPage() {
       {/* Main Content with Journey Path */}
       <div className="relative flex-1 px-4 md:px-8 lg:px-12 pb-12">
         <div className="relative max-w-5xl mx-auto">
-          {/* SVG Connecting Path */}
-          <svg 
-            className="absolute left-1/2 top-0 pointer-events-none" 
-            style={{ width: '4px', height: '100%', transform: 'translateX(-50%)' }}
-            preserveAspectRatio="none"
-            viewBox="0 0 4 1000"
-          >
-            <defs>
-              <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity="0.3" />
-                <stop offset="25%" stopColor="rgb(147, 51, 234)" stopOpacity="0.7" />
-                <stop offset="50%" stopColor="rgb(59, 130, 246)" stopOpacity="0.9" />
-                <stop offset="75%" stopColor="rgb(236, 72, 153)" stopOpacity="0.7" />
-                <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity="0.3" />
-              </linearGradient>
+          {/* SVG Connecting Path - Behind everything */}
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <svg 
+              className="absolute left-1/2 top-0" 
+              style={{ width: '4px', height: '100%', transform: 'translateX(-50%)' }}
+              preserveAspectRatio="none"
+              viewBox="0 0 4 1000"
+            >
+              <defs>
+                <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity="0.3" />
+                  <stop offset="25%" stopColor="rgb(147, 51, 234)" stopOpacity="0.7" />
+                  <stop offset="50%" stopColor="rgb(59, 130, 246)" stopOpacity="0.9" />
+                  <stop offset="75%" stopColor="rgb(236, 72, 153)" stopOpacity="0.7" />
+                  <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity="0.3" />
+                </linearGradient>
+                
+                <filter id="glow" x="-200%" y="-50%" width="500%" height="200%">
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                  </feMerge>
+                </filter>
+              </defs>
               
-              <filter id="glow" x="-200%" y="-50%" width="500%" height="200%">
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-            
-            {/* Vertical flowing path connecting all zones */}
-            <motion.path
-              d="M 2 0 Q 3 200, 2 250 T 2 500 T 2 750 L 2 1000"
-              stroke="url(#pathGradient)"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              filter="url(#glow)"
-              strokeDasharray="15 10"
-              initial={{ pathLength: 0, opacity: 0 }}
-              whileInView={{ pathLength: 1, opacity: 1 }}
-              viewport={{ once: false, amount: 0.1 }}
-              transition={{ duration: 3, ease: "easeInOut" }}
-            />
-            
-            {/* Animated flowing dots */}
-            <motion.circle
-              cx="2"
-              cy="0"
-              r="2"
-              fill="rgb(59, 130, 246)"
-              filter="url(#glow)"
-              animate={{ cy: [0, 1000] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            />
-          </svg>
+              {/* Vertical flowing path connecting all zones */}
+              <motion.path
+                d="M 2 0 Q 3 200, 2 250 T 2 500 T 2 750 L 2 1000"
+                stroke="url(#pathGradient)"
+                strokeWidth="3"
+                fill="none"
+                strokeLinecap="round"
+                filter="url(#glow)"
+                strokeDasharray="15 10"
+                initial={{ pathLength: 0, opacity: 0 }}
+                whileInView={{ pathLength: 1, opacity: 1 }}
+                viewport={{ once: false, amount: 0.1 }}
+                transition={{ duration: 3, ease: "easeInOut" }}
+              />
+              
+              {/* Animated flowing dots */}
+              <motion.circle
+                cx="2"
+                cy="0"
+                r="2"
+                fill="rgb(59, 130, 246)"
+                filter="url(#glow)"
+                animate={{ cy: [0, 1000] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              />
+            </svg>
+          </div>
 
-          {/* Zones List */}
-          <div className="relative space-y-24 md:space-y-32 py-12">
+          {/* Zones List - Above the path */}
+          <div className="relative space-y-24 md:space-y-32 py-12 z-10">
             {zones.map((zone, idx) => (
               <motion.div
                 key={zone.id}

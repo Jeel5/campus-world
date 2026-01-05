@@ -69,9 +69,6 @@ export function CampusSidebar() {
           </motion.div>
           <div className="flex flex-col">
             <h1 className="font-black text-xl tracking-tighter leading-none">CampusWorld</h1>
-            <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-bold mt-1">
-              Digital Twin v2.0
-            </span>
           </div>
         </div>
 

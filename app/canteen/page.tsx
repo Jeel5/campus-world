@@ -65,65 +65,76 @@ export default function CanteenPage() {
     return () => unsubscribe()
   }, [])
 
-  const openCloudinaryWidget = (type: "image" | "video") => {
-    if (!(window as any).cloudinary) {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: "image" | "video") => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file size
+    const maxSize = type === "image" ? 10 * 1024 * 1024 : 50 * 1024 * 1024 // 10MB for images, 50MB for videos
+    if (file.size > maxSize) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Cloudinary widget not loaded. Please refresh the page.",
+        title: "File Too Large",
+        description: `${type === "image" ? "Images" : "Videos"} must be under ${type === "image" ? "10MB" : "50MB"}`,
       })
+      event.target.value = ""
       return
     }
 
-    const widget = (window as any).cloudinary.createUploadWidget(
-      {
-        cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-        uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
-        sources: ["local", "url", "camera"],
-        multiple: false,
-        resourceType: type,
-        clientAllowedFormats: type === "image" ? ["jpg", "png", "gif", "webp"] : ["mp4", "mov", "avi"],
-        maxFileSize: type === "image" ? 10000000 : 50000000,
-        styles: {
-          palette: {
-            window: "#1a1e24",
-            windowBorder: "#2d3748",
-            tabIcon: "#f59e0b",
-            menuIcons: "#f59e0b",
-            textDark: "#ffffff",
-            textLight: "#ffffff",
-            link: "#f59e0b",
-            action: "#f59e0b",
-            inactiveTabIcon: "#6b7280",
-            error: "#ef4444",
-            inProgress: "#f59e0b",
-            complete: "#10b981",
-            sourceBg: "#13161a"
-          }
-        }
-      },
-      (error: any, result: any) => {
-        if (error) {
-          toast({
-            variant: "destructive",
-            title: "Upload Failed",
-            description: error.message || "Failed to upload media",
-          })
-          return
-        }
+    // Validate file type
+    const validTypes = type === "image" 
+      ? ["image/jpeg", "image/png", "image/gif", "image/webp"]
+      : ["video/mp4", "video/quicktime", "video/x-msvideo"]
+    
+    if (!validTypes.includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid File Type",
+        description: `Please select a valid ${type} file`,
+      })
+      event.target.value = ""
+      return
+    }
 
-        if (result.event === "success") {
-          setMediaUrl(result.info.secure_url)
-          setPostType(type)
-          toast({
-            title: "✅ Upload Successful",
-            description: `${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`,
-          })
+    try {
+      setUploading(true)
+      
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "")
+      
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/${type}/upload`,
+        {
+          method: "POST",
+          body: formData,
         }
+      )
+
+      if (!response.ok) {
+        throw new Error("Upload failed")
       }
-    )
 
-    widget.open()
+      const data = await response.json()
+      setMediaUrl(data.secure_url)
+      setPostType(type)
+      
+      toast({
+        title: "✅ Upload Successful",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`,
+      })
+    } catch (error) {
+      console.error("Upload error:", error)
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: "Failed to upload media. Please try again.",
+      })
+      event.target.value = ""
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleCreatePost = async () => {
@@ -581,10 +592,10 @@ export default function CanteenPage() {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="w-full max-w-2xl bg-gradient-to-br from-[#1a1d24] to-[#13161a] rounded-2xl overflow-hidden shadow-2xl"
+            className="w-full max-w-2xl bg-gradient-to-br from-[#1a1d24] to-[#13161a] rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-rose-700/20 bg-gradient-to-r from-rose-900/20 to-transparent">
+            <div className="p-6 border-b border-rose-700/20 bg-gradient-to-r from-rose-900/20 to-transparent flex-shrink-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Create Post</h2>
                 <Button
@@ -599,7 +610,7 @@ export default function CanteenPage() {
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { type: "text", icon: MessageSquare, label: "Text" },
@@ -631,22 +642,55 @@ export default function CanteenPage() {
 
               {(postType === "image" || postType === "video") && (
                 <div className="space-y-2">
-                  <Button
-                    onClick={() => openCloudinaryWidget(postType)}
-                    variant="outline"
-                    className="w-full border-white/10 text-white/70 hover:bg-white/10"
-                    disabled={uploading}
-                  >
-                    {postType === "image" ? <ImageIcon className="w-4 h-4 mr-2" /> : <VideoIcon className="w-4 h-4 mr-2" />}
-                    {mediaUrl ? "Change" : "Upload"} {postType}
-                  </Button>
+                  <label className="block">
+                    <input
+                      type="file"
+                      accept={postType === "image" ? "image/jpeg,image/png,image/gif,image/webp" : "video/mp4,video/quicktime,video/x-msvideo"}
+                      onChange={(e) => handleFileUpload(e, postType)}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <Button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        const input = e.currentTarget.previousElementSibling as HTMLInputElement
+                        input?.click()
+                      }}
+                      variant="outline"
+                      className="w-full border-white/10 text-white/70 hover:bg-white/10"
+                      disabled={uploading}
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          {postType === "image" ? <ImageIcon className="w-4 h-4 mr-2" /> : <VideoIcon className="w-4 h-4 mr-2" />}
+                          {mediaUrl ? "Change" : "Upload"} {postType}
+                        </>
+                      )}
+                    </Button>
+                  </label>
                   {mediaUrl && (
-                    <div className="relative rounded-lg overflow-hidden bg-black/20 max-h-[400px] overflow-y-auto">
+                    <div className="relative rounded-lg overflow-hidden bg-black/20">
                       {postType === "image" ? (
                         <img src={mediaUrl} alt="Preview" className="w-full h-auto" />
                       ) : (
                         <video src={mediaUrl} controls className="w-full h-auto" />
                       )}
+                      <button
+                        onClick={() => {
+                          setMediaUrl("")
+                          const input = document.querySelector('input[type="file"]') as HTMLInputElement
+                          if (input) input.value = ""
+                        }}
+                        className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   )}
                 </div>
